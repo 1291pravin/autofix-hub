@@ -1,0 +1,29 @@
+{
+  "apiiro": {
+    "secret": { "level": "small", "minutes": 5 },
+    "sca_minor": { "level": "small", "minutes": 5 },
+    "sca_major": { "level": "large", "minutes": 30 },
+    "sast_injection": { "level": "medium", "minutes": 15 },
+    "sast_xss": { "level": "medium", "minutes": 15 },
+    "misconfiguration": { "level": "medium", "minutes": 15 },
+    "pii": { "level": "medium", "minutes": 15 },
+    "__default__": { "level": "medium", "minutes": 15 }
+  },
+  "aqa": {
+    "color-contrast": { "level": "medium", "minutes": 15 },
+    "image-alt": { "level": "small", "minutes": 5 },
+    "label": { "level": "small", "minutes": 5 },
+    "heading-order": { "level": "medium", "minutes": 15 },
+    "html-has-lang": { "level": "trivial", "minutes": 2 },
+    "tabindex": { "level": "trivial", "minutes": 2 },
+    "__default__": { "level": "small", "minutes": 5 }
+  },
+  "sonarqube": {
+    "bug_BLOCKER": { "level": "large", "minutes": 30 },
+    "bug_CRITICAL": { "level": "large", "minutes": 30 },
+    "vulnerability_CRITICAL": { "level": "large", "minutes": 30 },
+    "code_smell_INFO": { "level": "trivial", "minutes": 2 },
+    "code_smell_MINOR": { "level": "small", "minutes": 5 },
+    "__default__": { "level": "medium", "minutes": 15 }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "autofix-hub",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @autofix-hub/core run dev",
+    "test": "pnpm -r run test"
+  }
+}

@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>autofix-hub Dashboard</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg-card: #1a1d27;
+  --bg-hover: #222633;
+  --border: #2a2e3d;
+  --text: #e1e4ed;
+  --text-muted: #8b90a0;
+  --accent: #6c7bff;
+  --accent-hover: #8b97ff;
+  --critical: #ff4d6a;
+  --high: #ff8c42;
+  --medium: #ffc53d;
+  --low: #4dabf7;
+  --info: #868e96;
+  --success: #51cf66;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --radius: 8px;
+  --radius-sm: 4px;
+}
+
+[data-theme="light"] {
+  --bg: #f4f5f9;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f1f5;
+  --border: #e0e2ea;
+  --text: #1a1d27;
+  --text-muted: #6b7080;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-mono);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.app { max-width: 1400px; margin: 0 auto; padding: 16px 24px; }
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+.header h1 span { color: var(--accent); }
+.last-scans { display: flex; gap: 12px; }
+.last-scan { font-size: 11px; color: var(--text-muted); }
+.last-scan .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
+.last-scan .dot.ok { background: var(--success); }
+.last-scan .dot.stale { background: var(--medium); }
+.last-scan .dot.none { background: var(--info); }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Buttons */
+.btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--bg-hover); border-color: var(--accent); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-sm { padding: 3px 8px; font-size: 11px; }
+.btn-danger { color: var(--critical); border-color: var(--critical); }
+.btn-danger:hover { background: rgba(255,77,106,0.1); }
+.btn-success { color: var(--success); border-color: var(--success); }
+.btn-success:hover { background: rgba(81,207,102,0.1); }
+.theme-toggle { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+.tab {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Summary Cards */
+.summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.card-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.card-value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+.card-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+thead th:hover { color: var(--text); }
+thead th .sort-arrow { margin-left: 4px; font-size: 10px; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:hover { background: var(--bg-hover); }
+tbody td { padding: 8px 10px; vertical-align: middle; white-space: nowrap; }
+td.desc { white-space: normal; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge-critical { background: rgba(255,77,106,0.15); color: var(--critical); }
+.badge-high { background: rgba(255,140,66,0.15); color: var(--high); }
+.badge-medium { background: rgba(255,197,61,0.15); color: var(--medium); }
+.badge-low { background: rgba(77,171,247,0.15); color: var(--low); }
+.badge-info { background: rgba(134,142,150,0.15); color: var(--info); }
+
+.badge-open { background: rgba(77,171,247,0.15); color: var(--low); }
+.badge-in_progress { background: rgba(255,197,61,0.15); color: var(--medium); }
+.badge-ai_fixed { background: rgba(108,123,255,0.15); color: var(--accent); }
+.badge-verified { background: rgba(81,207,102,0.15); color: var(--success); }
+.badge-merged { background: rgba(81,207,102,0.25); color: var(--success); }
+.badge-closed { background: rgba(134,142,150,0.15); color: var(--info); }
+.badge-rejected { background: rgba(255,77,106,0.15); color: var(--critical); }
+
+.badge-trivial { background: rgba(81,207,102,0.15); color: var(--success); }
+.badge-small { background: rgba(77,171,247,0.15); color: var(--low); }
+.badge-large { background: rgba(255,77,106,0.15); color: var(--critical); }
+
+.badge-source { background: rgba(108,123,255,0.1); color: var(--accent); font-size: 10px; }
+
+/* Cluster */
+.cluster-icon { font-size: 12px; color: var(--text-muted); margin-right: 2px; }
+
+/* Pagination */
+.pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+.pagination-btns { display: flex; gap: 4px; }
+
+/* Actions */
+.actions { display: flex; gap: 4px; flex-wrap: nowrap; }
+
+/* Reject modal */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.modal {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; min-width: 360px; max-width: 480px;
+}
+.modal h3 { margin-bottom: 12px; font-size: 14px; }
+.modal label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; margin-top: 10px; }
+.modal select, .modal textarea, .modal input {
+  width: 100%; font-family: var(--font-mono); font-size: 12px;
+  padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); resize: vertical;
+}
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* Metrics */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.metric-card h3 { font-size: 13px; margin-bottom: 12px; font-weight: 600; }
+.metric-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.metric-bar-label { min-width: 100px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.metric-bar-track { flex: 1; height: 16px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.metric-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.metric-bar-value { min-width: 50px; text-align: right; }
+.metric-table { width: 100%; font-size: 12px; }
+.metric-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); }
+
+/* Settings */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.scanner-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.scanner-card h3 { font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.status-dot.green { background: var(--success); }
+.status-dot.red { background: var(--critical); }
+.status-dot.gray { background: var(--info); }
+.scanner-detail { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.setting-row { margin-top: 12px; }
+.setting-row label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+.setting-row input, .setting-row select {
+  width: 100%; font-family: var(--font-mono); font-size: 12px;
+  padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+}
+.toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--border); border-radius: 10px; cursor: pointer; transition: 0.2s;
+}
+.toggle-slider:before {
+  content: ''; position: absolute; width: 14px; height: 14px;
+  left: 3px; bottom: 3px; background: var(--text); border-radius: 50%; transition: 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+/* Detail panel */
+.detail-panel {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+}
+.detail-panel h3 { font-size: 14px; margin-bottom: 12px; }
+.detail-row { display: flex; gap: 12px; margin-bottom: 6px; font-size: 12px; }
+.detail-key { min-width: 120px; color: var(--text-muted); }
+.detail-value { flex: 1; word-break: break-all; }
+.prompt-box {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px; font-size: 12px; white-space: pre-wrap; margin-top: 8px; max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: var(--text-muted); }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast-container { position: fixed; top: 16px; right: 16px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 16px; font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3); animation: slideIn 0.2s ease;
+}
+.toast.error { border-color: var(--critical); }
+.toast.success { border-color: var(--success); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Empty state */
+.empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ─── API helpers ────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(`/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ─── Toast ──────────────────────────────────────────────────
+function ToastContainer({ toasts }) {
+  return (
+    <div className="toast-container">
+      {toasts.map(t => <div key={t.id} className={`toast ${t.type}`}>{t.message}</div>)}
+    </div>
+  );
+}
+
+// ─── Severity / Status / Effort badges ──────────────────────
+function Badge({ type, value }) {
+  if (!value) return null;
+  return <span className={`badge badge-${value}`}>{value.replace(/_/g, ' ')}</span>;
+}
+
+// ─── Summary Cards ──────────────────────────────────────────
+function SummaryCards({ stats }) {
+  if (!stats) return null;
+  return (
+    <div className="summary-cards">
+      <div className="card">
+        <div className="card-label">Open Issues</div>
+        <div className="card-value">{stats.open || 0}</div>
+        <div className="card-sub">{stats.by_source ? Object.entries(stats.by_source).map(([s,c]) => `${s}: ${c.open || 0}`).join(' / ') : ''}</div>
+      </div>
+      <div className="card">
+        <div className="card-label">AI Fixed</div>
+        <div className="card-value" style={{color:'var(--accent)'}}>{stats.ai_fixed || 0}</div>
+        <div className="card-sub">awaiting review</div>
+      </div>
+      <div className="card">
+        <div className="card-label">Verified</div>
+        <div className="card-value" style={{color:'var(--success)'}}>{stats.verified || 0}</div>
+        <div className="card-sub">ready to merge</div>
+      </div>
+      <div className="card">
+        <div className="card-label">Acceptance Rate</div>
+        <div className="card-value">{stats.total_ai_fixed > 0 ? Math.round((stats.verified + (stats.merged || 0)) / stats.total_ai_fixed * 100) : '—'}%</div>
+        <div className="card-sub">{stats.total_ai_fixed || 0} total attempts</div>
+      </div>
+      <div className="card">
+        <div className="card-label">Auto-Approved</div>
+        <div className="card-value">{stats.auto_approved || 0}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reject Modal ───────────────────────────────────────────
+const REJECTION_TAGS = ['wrong_scope','broke_tests','style_mismatch','incomplete_fix','wrong_approach','other'];
+
+function RejectModal({ issueId, onClose, onReject }) {
+  const [tag, setTag] = useState('wrong_scope');
+  const [reason, setReason] = useState('');
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h3>Reject {issueId}</h3>
+        <label>Rejection Tag</label>
+        <select value={tag} onChange={e => setTag(e.target.value)}>
+          {REJECTION_TAGS.map(t => <option key={t} value={t}>{t.replace(/_/g,' ')}</option>)}
+        </select>
+        <label>Reason</label>
+        <textarea rows={3} value={reason} onChange={e => setReason(e.target.value)} placeholder="Why was this fix rejected?" />
+        <div className="modal-actions">
+          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn btn-danger" onClick={() => onReject(tag, reason)}>Reject</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Issue Detail Panel ─────────────────────────────────────
+function IssueDetail({ issue, onClose, onStatusChange, addToast }) {
+  if (!issue) return null;
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(issue.fix_prompt || '').then(() => addToast('Prompt copied', 'success'));
+  };
+  return (
+    <div className="detail-panel">
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <h3>{issue.id}</h3>
+        <button className="btn btn-sm" onClick={onClose}>Close</button>
+      </div>
+      <div style={{marginTop:12}}>
+        <div className="detail-row"><span className="detail-key">Source</span><span className="detail-value"><Badge type="source" value={issue.source} /></span></div>
+        <div className="detail-row"><span className="detail-key">Severity</span><span className="detail-value"><Badge type="severity" value={issue.severity} /></span></div>
+        <div className="detail-row"><span className="detail-key">Status</span><span className="detail-value"><Badge type="status" value={issue.status} /></span></div>
+        <div className="detail-row"><span className="detail-key">Impact Score</span><span className="detail-value">{issue.impact_score ?? '—'}</span></div>
+        <div className="detail-row"><span className="detail-key">Effort</span><span className="detail-value"><Badge type="effort" value={issue.estimated_effort} /> ({issue.estimated_minutes || '?'} min)</span></div>
+        <div className="detail-row"><span className="detail-key">Review Level</span><span className="detail-value">{issue.review_level || '—'}</span></div>
+        <div className="detail-row"><span className="detail-key">Rule</span><span className="detail-value">{issue.rule_id || '—'}</span></div>
+        <div className="detail-row"><span className="detail-key">File</span><span className="detail-value">{issue.file_path || '—'}{issue.line_number ? `:${issue.line_number}` : ''}</span></div>
+        <div className="detail-row"><span className="detail-key">Category</span><span className="detail-value">{issue.category || '—'}</span></div>
+        <div className="detail-row"><span className="detail-key">Cluster</span><span className="detail-value">{issue.cluster_id || 'None'}</span></div>
+        <div className="detail-row"><span className="detail-key">Description</span><span className="detail-value">{issue.description || '—'}</span></div>
+        <div className="detail-row"><span className="detail-key">Created</span><span className="detail-value">{issue.created_at || '—'}</span></div>
+        {issue.resolved_at && <div className="detail-row"><span className="detail-key">Resolved</span><span className="detail-value">{issue.resolved_at}</span></div>}
+        {issue.reviewed_by && <div className="detail-row"><span className="detail-key">Reviewed By</span><span className="detail-value">{issue.reviewed_by}</span></div>}
+        {issue.rejected_reason && <div className="detail-row"><span className="detail-key">Rejection</span><span className="detail-value">{issue.rejected_reason}</span></div>}
+      </div>
+      {issue.fix_prompt && (
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12}}>
+            <span className="card-label">Fix Prompt</span>
+            <button className="btn btn-sm" onClick={copyPrompt}>Copy</button>
+          </div>
+          <div className="prompt-box">{issue.fix_prompt}</div>
+        </div>
+      )}
+      {issue.fix_attempts && issue.fix_attempts.length > 0 && (
+        <div style={{marginTop:12}}>
+          <span className="card-label">Fix Attempts ({issue.fix_attempts.length})</span>
+          <table className="metric-table" style={{marginTop:6}}>
+            <tbody>
+              {issue.fix_attempts.map((a,i) => (
+                <tr key={i}>
+                  <td>{a.attempted_at}</td>
+                  <td><Badge type="status" value={a.success ? 'verified' : 'rejected'} /></td>
+                  <td>{a.tool_used || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Issues Tab ─────────────────────────────────────────────
+function IssuesTab({ sourceFilter, addToast }) {
+  const [issues, setIssues] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [sort, setSort] = useState('impact_score');
+  const [order, setOrder] = useState('desc');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [rejectId, setRejectId] = useState(null);
+
+  const fetchIssues = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page, limit: 50, sort, order });
+      if (sourceFilter) params.set('source', sourceFilter);
+      if (statusFilter) params.set('status', statusFilter);
+      if (severityFilter) params.set('severity', severityFilter);
+      const data = await api(`/issues?${params}`);
+      setIssues(data.issues);
+      setPagination(data.pagination);
+    } catch (e) { addToast(e.message, 'error'); }
+    setLoading(false);
+  }, [page, sort, order, sourceFilter, statusFilter, severityFilter]);
+
+  useEffect(() => { fetchIssues(); }, [fetchIssues]);
+
+  const toggleSort = (col) => {
+    if (sort === col) setOrder(o => o === 'desc' ? 'asc' : 'desc');
+    else { setSort(col); setOrder('desc'); }
+  };
+  const sortArrow = (col) => sort === col ? (order === 'desc' ? ' \u25BC' : ' \u25B2') : '';
+
+  const viewDetail = async (id) => {
+    try {
+      const data = await api(`/issues/${id}`);
+      setSelected(data.issue);
+    } catch (e) { addToast(e.message, 'error'); }
+  };
+
+  const changeStatus = async (id, status, extra = {}) => {
+    try {
+      await api(`/issues/${id}/status`, { method: 'POST', body: { status, ...extra } });
+      addToast(`${id} \u2192 ${status}`, 'success');
+      fetchIssues();
+      if (selected && selected.id === id) viewDetail(id);
+    } catch (e) { addToast(e.message, 'error'); }
+  };
+
+  const handleReject = async (tag, reason) => {
+    await changeStatus(rejectId, 'rejected', { rejection_tag: tag, rejected_reason: reason });
+    setRejectId(null);
+  };
+
+  return (
+    <div>
+      {selected && <IssueDetail issue={selected} onClose={() => setSelected(null)} onStatusChange={changeStatus} addToast={addToast} />}
+      {rejectId && <RejectModal issueId={rejectId} onClose={() => setRejectId(null)} onReject={handleReject} />}
+
+      <div style={{display:'flex', gap:8, marginBottom:12, flexWrap:'wrap'}}>
+        <select className="btn" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
+          <option value="">All statuses</option>
+          {['open','in_progress','ai_fixed','verified','merged','closed','rejected'].map(s =>
+            <option key={s} value={s}>{s.replace(/_/g,' ')}</option>
+          )}
+        </select>
+        <select className="btn" value={severityFilter} onChange={e => { setSeverityFilter(e.target.value); setPage(1); }}>
+          <option value="">All severities</option>
+          {['critical','high','medium','low','info'].map(s =>
+            <option key={s} value={s}>{s}</option>
+          )}
+        </select>
+        <span style={{marginLeft:'auto', color:'var(--text-muted)', fontSize:12, alignSelf:'center'}}>{pagination.total} issues</span>
+      </div>
+
+      <div className="table-wrap">
+        {loading ? (
+          <div className="loading"><div className="spinner" /></div>
+        ) : issues.length === 0 ? (
+          <div className="empty"><h3>No issues found</h3><p>Run a fetch command to populate issues.</p></div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th onClick={() => toggleSort('source')}>Source{sortArrow('source')}</th>
+                <th>ID</th>
+                <th onClick={() => toggleSort('severity')}>Severity{sortArrow('severity')}</th>
+                <th onClick={() => toggleSort('impact_score')}>Impact{sortArrow('impact_score')}</th>
+                <th onClick={() => toggleSort('estimated_minutes')}>Effort{sortArrow('estimated_minutes')}</th>
+                <th>Description</th>
+                <th onClick={() => toggleSort('status')}>Status{sortArrow('status')}</th>
+                <th>Review</th>
+                <th>Cluster</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {issues.map(issue => (
+                <tr key={issue.id}>
+                  <td><Badge type="source" value={issue.source} /></td>
+                  <td style={{cursor:'pointer', color:'var(--accent)'}} onClick={() => viewDetail(issue.id)}>{issue.id}</td>
+                  <td><Badge type="severity" value={issue.severity} /></td>
+                  <td>{issue.impact_score != null ? Number(issue.impact_score).toFixed(1) : '—'}</td>
+                  <td><Badge type="effort" value={issue.estimated_effort} /></td>
+                  <td className="desc" title={issue.description}>{(issue.description || '').slice(0, 80)}{(issue.description || '').length > 80 ? '...' : ''}</td>
+                  <td><Badge type="status" value={issue.status} /></td>
+                  <td style={{fontSize:11, color:'var(--text-muted)'}}>{issue.review_level || '—'}</td>
+                  <td>{issue.cluster_id ? <span><span className="cluster-icon">\u25A0</span>{issue.cluster_id.slice(0,8)}</span> : ''}</td>
+                  <td>
+                    <div className="actions">
+                      <button className="btn btn-sm" onClick={() => viewDetail(issue.id)}>View</button>
+                      {(issue.status === 'ai_fixed' || issue.status === 'verified') && (
+                        <button className="btn btn-sm btn-success" onClick={() => changeStatus(issue.id, issue.status === 'ai_fixed' ? 'verified' : 'merged')}>
+                          {issue.status === 'ai_fixed' ? 'Approve' : 'Merge'}
+                        </button>
+                      )}
+                      {(issue.status === 'ai_fixed' || issue.status === 'in_progress') && (
+                        <button className="btn btn-sm btn-danger" onClick={() => setRejectId(issue.id)}>Reject</button>
+                      )}
+                      {issue.fix_prompt && (
+                        <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(issue.fix_prompt); addToast('Copied', 'success'); }}>Prompt</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {pagination.pages > 1 && (
+        <div className="pagination">
+          <span>Page {pagination.page} of {pagination.pages}</span>
+          <div className="pagination-btns">
+            <button className="btn btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+            <button className="btn btn-sm" disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)}>Next</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Metrics Tab ────────────────────────────────────────────
+function MetricsTab({ addToast }) {
+  const [mttf, setMttf] = useState(null);
+  const [acceptance, setAcceptance] = useState(null);
+  const [velocity, setVelocity] = useState(null);
+  const [queue, setQueue] = useState(null);
+  const [rejections, setRejections] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      api('/metrics/mttf').then(setMttf).catch(() => null),
+      api('/metrics/acceptance').then(setAcceptance).catch(() => null),
+      api('/metrics/velocity?period=week').then(setVelocity).catch(() => null),
+      api('/metrics/queue-health').then(setQueue).catch(() => null),
+      api('/metrics/rejections').then(setRejections).catch(() => null),
+    ]);
+  }, []);
+
+  const maxVal = (arr, key) => Math.max(...arr.map(r => r[key] || 0), 1);
+
+  return (
+    <div className="metrics-grid">
+      {/* Queue Health */}
+      <div className="metric-card">
+        <h3>Queue Health</h3>
+        {queue ? (
+          <div>
+            <div className="detail-row"><span className="detail-key">Open Issues</span><span className="detail-value" style={{fontWeight:700,fontSize:20}}>{queue.open_count}</span></div>
+            <div className="detail-row"><span className="detail-key">Est. Time to Clear</span><span className="detail-value">{queue.estimated_hours ? `${queue.estimated_hours.toFixed(1)}h` : '—'}</span></div>
+            <div className="detail-row"><span className="detail-key">Aging (&gt;7 days)</span><span className="detail-value" style={{color: queue.aging_count > 0 ? 'var(--medium)' : 'var(--success)'}}>{queue.aging_count}</span></div>
+          </div>
+        ) : <div className="loading"><div className="spinner" /></div>}
+      </div>
+
+      {/* MTTF by source */}
+      <div className="metric-card">
+        <h3>Mean Time to Fix (hours)</h3>
+        {mttf && mttf.results ? (
+          mttf.results.length > 0 ? mttf.results.map((r, i) => {
+            const hours = (r.avg_minutes || 0) / 60;
+            const max = maxVal(mttf.results, 'avg_minutes') / 60;
+            return (
+              <div key={i} className="metric-bar-row">
+                <span className="metric-bar-label">{r.source || r.severity || 'all'}</span>
+                <div className="metric-bar-track">
+                  <div className="metric-bar-fill" style={{width: `${(hours/max)*100}%`, background:'var(--accent)'}} />
+                </div>
+                <span className="metric-bar-value">{hours.toFixed(1)}h</span>
+              </div>
+            );
+          }) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
+        ) : <div className="loading"><div className="spinner" /></div>}
+      </div>
+
+      {/* Acceptance Rate */}
+      <div className="metric-card">
+        <h3>Acceptance Rate by Rule</h3>
+        {acceptance && acceptance.results ? (
+          acceptance.results.length > 0 ? acceptance.results.slice(0, 10).map((r, i) => (
+            <div key={i} className="metric-bar-row">
+              <span className="metric-bar-label" title={r.rule_id}>{(r.rule_id || 'unknown').slice(0, 20)}</span>
+              <div className="metric-bar-track">
+                <div className="metric-bar-fill" style={{width: `${r.rate * 100}%`, background: r.rate > 0.7 ? 'var(--success)' : r.rate > 0.4 ? 'var(--medium)' : 'var(--critical)'}} />
+              </div>
+              <span className="metric-bar-value">{(r.rate * 100).toFixed(0)}%</span>
+            </div>
+          )) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
+        ) : <div className="loading"><div className="spinner" /></div>}
+      </div>
+
+      {/* Velocity */}
+      <div className="metric-card">
+        <h3>Fix Velocity (per week)</h3>
+        {velocity && velocity.results ? (
+          velocity.results.length > 0 ? (
+            <table className="metric-table">
+              <tbody>
+                {velocity.results.slice(0, 12).map((r, i) => (
+                  <tr key={i}>
+                    <td style={{color:'var(--text-muted)'}}>{r.period}</td>
+                    <td style={{fontWeight:600}}>{r.fixed_count}</td>
+                    <td>
+                      {r.trend === 'up' ? <span style={{color:'var(--success)'}}>&#9650;</span> :
+                       r.trend === 'down' ? <span style={{color:'var(--critical)'}}>&#9660;</span> :
+                       <span style={{color:'var(--text-muted)'}}>&#9644;</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
+        ) : <div className="loading"><div className="spinner" /></div>}
+      </div>
+
+      {/* Rejections */}
+      <div className="metric-card">
+        <h3>Top Rejection Patterns</h3>
+        {rejections && rejections.results ? (
+          rejections.results.length > 0 ? (
+            <table className="metric-table">
+              <tbody>
+                {rejections.results.slice(0, 10).map((r, i) => (
+                  <tr key={i}>
+                    <td><Badge type="source" value={r.source} /></td>
+                    <td>{r.pattern_tag}</td>
+                    <td style={{fontWeight:600}}>{r.occurrences}</td>
+                    <td style={{color:'var(--text-muted)'}}>{r.rule_id || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <div style={{color:'var(--text-muted)'}}>No rejections yet</div>
+        ) : <div className="loading"><div className="spinner" /></div>}
+      </div>
+
+      {/* Found vs Fixed placeholder */}
+      <div className="metric-card">
+        <h3>Issues Found vs Fixed</h3>
+        {velocity && velocity.results ? (
+          velocity.results.length > 0 ? (
+            <table className="metric-table">
+              <tbody>
+                <tr><td style={{color:'var(--text-muted)'}}>Period</td><td>Found</td><td>Fixed</td></tr>
+                {velocity.results.slice(0, 8).map((r, i) => (
+                  <tr key={i}>
+                    <td style={{color:'var(--text-muted)'}}>{r.period}</td>
+                    <td>{r.found_count || 0}</td>
+                    <td style={{color:'var(--success)'}}>{r.fixed_count || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
+        ) : <div className="loading"><div className="spinner" /></div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Settings Tab ───────────────────────────────────────────
+function SettingsTab({ addToast }) {
+  const [scanners, setScanners] = useState([]);
+  const [schedule, setSchedule] = useState([]);
+  const [testResults, setTestResults] = useState({});
+  const [testing, setTesting] = useState({});
+
+  useEffect(() => {
+    api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
+    api('/schedule-status').then(d => setSchedule(Array.isArray(d) ? d : d.schedules || [])).catch(() => {});
+  }, []);
+
+  const testConnection = async (source) => {
+    setTesting(t => ({...t, [source]: true}));
+    try {
+      const result = await api(`/scanners/${source}/test`, { method: 'POST' });
+      setTestResults(r => ({...r, [source]: result}));
+      addToast(`${source}: test complete`, 'success');
+    } catch (e) {
+      setTestResults(r => ({...r, [source]: { error: e.message }}));
+      addToast(`${source}: ${e.message}`, 'error');
+    }
+    setTesting(t => ({...t, [source]: false}));
+  };
+
+  return (
+    <div>
+      <h3 style={{marginBottom:16}}>Scanner Configuration</h3>
+      <div className="settings-grid">
+        {scanners.map(s => {
+          const result = testResults[s.name];
+          const statusColor = result
+            ? (result.error ? 'red' : (result.installed?.installed ? 'green' : 'red'))
+            : 'gray';
+          return (
+            <div key={s.name} className="scanner-card">
+              <h3><span className={`status-dot ${statusColor}`} /> {s.displayName || s.name}</h3>
+              <div className="scanner-detail">Plugin: @autofix-hub/plugin-{s.name}</div>
+              <div className="scanner-detail">Installed: {s.installed ? 'Yes' : 'No'}</div>
+              {result && !result.error && (
+                <div>
+                  {result.installed && <div className="scanner-detail">CLI: {result.installed.installed ? result.installed.message || 'OK' : 'Not found'}</div>}
+                  {result.auth && <div className="scanner-detail">Auth: {result.auth.authenticated ? 'OK' : result.auth.message || 'Not authenticated'}</div>}
+                </div>
+              )}
+              {result && result.error && <div className="scanner-detail" style={{color:'var(--critical)'}}>Error: {result.error}</div>}
+              <button className="btn btn-sm" style={{marginTop:8}} onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
+                {testing[s.name] ? 'Testing...' : 'Test Connection'}
+              </button>
+            </div>
+          );
+        })}
+        {scanners.length === 0 && <div style={{color:'var(--text-muted)'}}>No plugins installed</div>}
+      </div>
+
+      <h3 style={{marginTop:24, marginBottom:16}}>Schedule</h3>
+      <div className="settings-grid">
+        {schedule.length > 0 ? schedule.map((s, i) => (
+          <div key={i} className="scanner-card">
+            <h3>{s.source}</h3>
+            <div className="scanner-detail">Cron: {s.cronExpr || '—'}</div>
+            <div className="scanner-detail">Next Run: {s.nextRun || '—'}</div>
+          </div>
+        )) : <div style={{color:'var(--text-muted)'}}>No scheduled tasks</div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── App ────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState('all');
+  const [theme, setTheme] = useState(localStorage.getItem('afh-theme') || 'dark');
+  const [stats, setStats] = useState(null);
+  const [scanners, setScanners] = useState([]);
+  const [scanHistory, setScanHistory] = useState([]);
+  const [toasts, setToasts] = useState([]);
+  const toastId = useRef(0);
+
+  const addToast = (message, type = 'info') => {
+    const id = ++toastId.current;
+    setToasts(t => [...t, { id, message, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3000);
+  };
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('afh-theme', next);
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const refreshStats = useCallback(() => {
+    api('/stats').then(setStats).catch(() => {});
+    api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
+    api('/scan-history?limit=5').then(d => setScanHistory(d.history || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => { refreshStats(); const iv = setInterval(refreshStats, 30000); return () => clearInterval(iv); }, [refreshStats]);
+
+  const pluginTabs = scanners.filter(s => s.installed).map(s => s.name);
+
+  const sourceFilter = (tab === 'all' || tab === 'metrics' || tab === 'settings') ? '' : tab;
+
+  const getLastScan = (source) => {
+    const entry = scanHistory.find(h => h.source === source);
+    if (!entry) return { status: 'none', text: 'never' };
+    const ago = Math.round((Date.now() - new Date(entry.ran_at).getTime()) / 60000);
+    if (ago < 60) return { status: 'ok', text: `${ago}m ago` };
+    if (ago < 1440) return { status: 'ok', text: `${Math.round(ago/60)}h ago` };
+    return { status: 'stale', text: `${Math.round(ago/1440)}d ago` };
+  };
+
+  return (
+    <div className="app">
+      <ToastContainer toasts={toasts} />
+
+      <div className="header">
+        <div className="header-left">
+          <h1><span>autofix</span>-hub</h1>
+          <div className="last-scans">
+            {pluginTabs.map(name => {
+              const ls = getLastScan(name);
+              return <span key={name} className="last-scan"><span className={`dot ${ls.status}`} />{name}: {ls.text}</span>;
+            })}
+          </div>
+        </div>
+        <div className="header-actions">
+          <button className="btn btn-primary" onClick={() => addToast('Use CLI: autofix-hub <source> fetch', 'info')}>Fetch All</button>
+          <button className="btn" onClick={() => addToast('Use CLI: autofix-hub <source> fix-next', 'info')}>Fix Next</button>
+          <button className="theme-toggle" onClick={toggleTheme}>{theme === 'dark' ? '\u2600' : '\u263E'}</button>
+        </div>
+      </div>
+
+      <div className="tabs">
+        <button className={`tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All</button>
+        {pluginTabs.map(name => (
+          <button key={name} className={`tab ${tab === name ? 'active' : ''}`} onClick={() => setTab(name)}>
+            {name.charAt(0).toUpperCase() + name.slice(1)}
+          </button>
+        ))}
+        <button className={`tab ${tab === 'metrics' ? 'active' : ''}`} onClick={() => setTab('metrics')}>Metrics</button>
+        <button className={`tab ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')}>Settings</button>
+      </div>
+
+      {tab !== 'metrics' && tab !== 'settings' && <SummaryCards stats={stats} />}
+
+      {tab === 'metrics' ? (
+        <MetricsTab addToast={addToast} />
+      ) : tab === 'settings' ? (
+        <SettingsTab addToast={addToast} />
+      ) : (
+        <IssuesTab sourceFilter={sourceFilter} addToast={addToast} />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "severity_weights": {
+    "critical": 100,
+    "high": 70,
+    "medium": 40,
+    "low": 15,
+    "info": 5
+  },
+  "path_criticality": {
+    "src/auth/*": 10,
+    "src/payment/*": 10,
+    "src/api/*": 7,
+    "src/middleware/*": 6,
+    "src/components/*": 4,
+    "src/utils/*": 2,
+    "src/tests/*": 1,
+    "__default__": 3
+  },
+  "page_importance": {
+    "/checkout*": 10,
+    "/login*": 10,
+    "/signup*": 8,
+    "/dashboard*": 6,
+    "/*": 3
+  },
+  "type_weights": {
+    "bug": 8,
+    "vulnerability": 10,
+    "security_hotspot": 7,
+    "code_smell": 3
+  }
+}

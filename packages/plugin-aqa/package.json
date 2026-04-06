@@ -1,0 +1,8 @@
+{
+  "name": "@autofix-hub/plugin-aqa",
+  "version": "0.1.0",
+  "main": "src/index.js",
+  "dependencies": {
+    "@autofix-hub/core": "workspace:*"
+  }
+}
