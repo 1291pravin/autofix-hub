@@ -1,7 +1,27 @@
 {
   "name": "@autofix-hub/plugin-sonarqube",
   "version": "0.1.0",
+  "description": "SonarQube code quality scanner plugin for autofix-hub",
+  "keywords": [
+    "autofix-hub",
+    "plugin",
+    "sonarqube",
+    "code-quality",
+    "scanner"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/autofix-hub.git",
+    "directory": "packages/plugin-sonarqube"
+  },
   "main": "src/index.js",
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@autofix-hub/core": "workspace:*"
   }

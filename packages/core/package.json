@@ -1,17 +1,40 @@
 {
   "name": "@autofix-hub/core",
   "version": "0.1.0",
+  "description": "Core CLI and shared logic for autofix-hub — scoring, clustering, dedup, git/PR workflow, dashboard, and plugin loader",
+  "keywords": [
+    "security",
+    "accessibility",
+    "scanner",
+    "autofix",
+    "cli",
+    "devops"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/autofix-hub.git",
+    "directory": "packages/core"
+  },
+  "main": "src/config.js",
   "bin": {
     "autofix-hub": "./bin/autofix-hub.js"
   },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
-    "commander": "^12.0.0",
-    "express": "^4.18.0",
-    "node-cron": "^3.0.0",
-    "dotenv": "^16.0.0",
     "chalk": "^4.1.2",
+    "cli-table3": "^0.6.0",
+    "commander": "^12.0.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
     "inquirer": "^8.0.0",
-    "cli-table3": "^0.6.0"
+    "node-cron": "^3.0.0"
   }
 }

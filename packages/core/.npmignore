@@ -1,0 +1,5 @@
+__tests__/
+test/
+*.test.js
+*.spec.js
+.autofix-hub/

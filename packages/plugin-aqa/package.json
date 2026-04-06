@@ -1,7 +1,28 @@
 {
   "name": "@autofix-hub/plugin-aqa",
   "version": "0.1.0",
+  "description": "UsableNet AQA accessibility scanner plugin for autofix-hub",
+  "keywords": [
+    "autofix-hub",
+    "plugin",
+    "aqa",
+    "usablenet",
+    "accessibility",
+    "a11y"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/autofix-hub.git",
+    "directory": "packages/plugin-aqa"
+  },
   "main": "src/index.js",
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@autofix-hub/core": "workspace:*"
   }

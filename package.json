@@ -1,6 +1,26 @@
 {
   "name": "autofix-hub",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Modular CLI that fetches issues from security/accessibility scanners, scores and clusters them, generates AI fix prompts, and manages git branches/PRs",
+  "keywords": [
+    "security",
+    "accessibility",
+    "scanner",
+    "autofix",
+    "apiiro",
+    "sonarqube",
+    "aqa",
+    "cli",
+    "devops"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/autofix-hub.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "pnpm --filter @autofix-hub/core run dev",
     "test": "pnpm -r run test"

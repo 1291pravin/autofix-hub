@@ -1,7 +1,27 @@
 {
   "name": "@autofix-hub/plugin-apiiro",
   "version": "0.1.0",
+  "description": "Apiiro security scanner plugin for autofix-hub",
+  "keywords": [
+    "autofix-hub",
+    "plugin",
+    "apiiro",
+    "security",
+    "scanner"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/autofix-hub.git",
+    "directory": "packages/plugin-apiiro"
+  },
   "main": "src/index.js",
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@autofix-hub/core": "workspace:*"
   }
