@@ -233,42 +233,22 @@ module.exports = {
       message: 'AQA API key (X-Team header value):',
       validate: (v) => v.trim() ? true : 'API key is required',
     },
-    {
-      type: 'list',
-      name: 'method',
-      message: 'Choose the scanning method:',
-      choices: [
-        { name: 'API', value: 'api' },
-        { name: 'Playwright', value: 'playwright' },
-      ],
-      default: 'api',
-    },
   ],
 
   fetch: async (config) => {
-    const method = config.method || process.env.AQA_METHOD || 'api';
-    
+    const method = config.method || 'api';
+
     if (method === 'playwright') {
       return module.exports.scanWithPlaywright(config);
     }
-    
-    // Original API method
+
+    // API method
     return module.exports.fetchFromAPI(config);
   },
 
   scanWithPlaywright: async (config) => {
-    try {
-      const { scanWithPlaywright } = require('./playwright/index');
-      return await scanWithPlaywright(config);
-    } catch (error) {
-      console.error('Playwright scanning failed:', error.message);
-      // Fallback to API method if configured
-      if (config.fallbackToAPI !== false && config.api_key && config.team_slug) {
-        console.log('Falling back to API method...');
-        return module.exports.fetchFromAPI(config);
-      }
-      throw error;
-    }
+    const { scanWithPlaywright } = require('./playwright/index');
+    return await scanWithPlaywright(config);
   },
 
   fetchFromAPI: async (config) => {

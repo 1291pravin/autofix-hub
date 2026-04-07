@@ -325,23 +325,23 @@ async function captureSnapshot(context, page, extensionId, timeout = ANALYZER_IN
 async function evaluateSnapshot(snapshot, config) {
   const JSZip = require('jszip');
 
-  const apiKey = config.apiKey || process.env.AQA_USER_API_KEY || process.env.AQA_EXTENSION_API_KEY || process.env.AQA_API_KEY;
+  const apiKey = config.apiKey || process.env.AQA_USER_API_KEY || process.env.AQA_API_KEY;
   const teamSlug = config.teamSlug || process.env.AQA_TEAM_SLUG;
-  const apiHost = config.apiHost || process.env.AQA_API_HOST || AQA_API_HOST;
+  const apiHost = config.apiHost || AQA_API_HOST;
   const lang = config.lang || 'en';
   const ruleset = config.ruleset || process.env.AQA_RULESET_ID || 'wcag22';
   const pageUrl = config.pageUrl || 'unknown';
 
   if (!apiKey) {
     throw new Error(
-      'AQA API key is required for aqa-main engine.\n' +
-      'Set AQA_EXTENSION_API_KEY or AQA_API_KEY in your .env file.'
+      'AQA API key is required for aqa engine.\n' +
+      'Pass --api-key or set AQA_API_KEY in your .env file.'
     );
   }
   if (!teamSlug) {
     throw new Error(
-      'AQA team slug is required for aqa-main engine.\n' +
-      'Set AQA_TEAM_SLUG in your .env file.'
+      'AQA team slug is required for aqa engine.\n' +
+      'Pass --team-slug or set AQA_TEAM_SLUG in your .env file.'
     );
   }
 

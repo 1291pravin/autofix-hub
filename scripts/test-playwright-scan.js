@@ -10,12 +10,9 @@
  * Examples:
  *   node scripts/test-playwright-scan.js https://fr.filorga.com           # default: axe
  *   node scripts/test-playwright-scan.js https://fr.filorga.com axe       # axe-core only
- *   node scripts/test-playwright-scan.js https://fr.filorga.com aqa       # AQA Page Capture extension
- *   node scripts/test-playwright-scan.js https://fr.filorga.com aqa-main  # Main AQA extension (direct eval)
- *   node scripts/test-playwright-scan.js https://fr.filorga.com both      # axe + AQA Page Capture
+ *   node scripts/test-playwright-scan.js https://fr.filorga.com aqa       # Main AQA extension (direct eval)
  *
- * AQA engine requires: AQA_EXTENSION_API_KEY, AQA_TEAM_SLUG, AQA_SUITE_ID in .env
- * AQA-main engine requires: Main AQA extension unpacked in extensions/main-aqa-extension/
+ * AQA engine requires: AQA_USER_API_KEY (or AQA_API_KEY), AQA_TEAM_SLUG in .env
  */
 
 const path = require('path');
@@ -28,19 +25,14 @@ async function main() {
   const engine = process.argv[3] || 'axe';
 
   if (!targetUrl) {
-    console.error('Usage: node scripts/test-playwright-scan.js <url> [axe|aqa|aqa-main|both]');
+    console.error('Usage: node scripts/test-playwright-scan.js <url> [axe|aqa]');
     process.exit(1);
   }
 
-  if (!['axe', 'aqa', 'aqa-main', 'both'].includes(engine)) {
-    console.error(`Invalid engine "${engine}". Must be: axe, aqa, aqa-main, or both`);
+  if (!['axe', 'aqa'].includes(engine)) {
+    console.error(`Invalid engine "${engine}". Must be: axe or aqa`);
     process.exit(1);
   }
-
-  // Force playwright method for this test
-  process.env.AQA_METHOD = 'playwright';
-  process.env.AQA_URLS = targetUrl;
-  process.env.AQA_SCAN_ENGINE = engine;
 
   const plugin = require('../packages/plugin-aqa/src/index.js');
   const startTime = Date.now();
@@ -52,16 +44,11 @@ async function main() {
   console.log(`========================================\n`);
 
   try {
-    const rawIssues = await plugin.fetch({
-      method: 'playwright',
+    const rawIssues = await plugin.scanWithPlaywright({
       urls: targetUrl,
       scanEngine: engine,
-      api_key: process.env.AQA_API_KEY || 'unused-for-axe',
-      team_slug: process.env.AQA_TEAM_SLUG || 'unused-for-axe',
-      aqaApiKey: process.env.AQA_EXTENSION_API_KEY || process.env.AQA_API_KEY,
-      aqaTeamSlug: process.env.AQA_TEAM_SLUG,
-      aqaSuiteId: process.env.AQA_SUITE_ID,
-      fallbackToAPI: false,
+      apiKey: process.env.AQA_USER_API_KEY || process.env.AQA_API_KEY,
+      teamSlug: process.env.AQA_TEAM_SLUG,
     });
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

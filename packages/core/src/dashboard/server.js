@@ -5,7 +5,6 @@ const express = require('express');
 const { getDb } = require('../db');
 const { initSchema } = require('../setup');
 const { loadPlugins, listPlugins } = require('../pluginLoader');
-const { startScheduler, getScheduleStatus } = require('../scheduler');
 const {
   getMTTF,
   getAcceptanceRate,
@@ -272,11 +271,6 @@ function createApp() {
     }
   });
 
-  // Schedule status
-  app.get('/api/schedule-status', (req, res) => {
-    res.json(getScheduleStatus());
-  });
-
   // Scan history
   app.get('/api/scan-history', (req, res) => {
     const db = getDb();
@@ -320,17 +314,6 @@ function startServer(options = {}) {
 
   // Initialize DB schema
   initSchema();
-
-  // Start scheduler
-  try {
-    const plugins = loadPlugins();
-    if (plugins.size > 0) {
-      console.log('\nStarting scheduler...');
-      startScheduler(plugins);
-    }
-  } catch (_) {
-    // Scheduler is optional
-  }
 
   return new Promise((resolve) => {
     const server = app.listen(port, () => {

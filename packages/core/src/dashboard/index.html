@@ -714,13 +714,11 @@ function MetricsTab({ addToast }) {
 // ─── Settings Tab ───────────────────────────────────────────
 function SettingsTab({ addToast }) {
   const [scanners, setScanners] = useState([]);
-  const [schedule, setSchedule] = useState([]);
   const [testResults, setTestResults] = useState({});
   const [testing, setTesting] = useState({});
 
   useEffect(() => {
     api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
-    api('/schedule-status').then(d => setSchedule(Array.isArray(d) ? d : d.schedules || [])).catch(() => {});
   }, []);
 
   const testConnection = async (source) => {
@@ -766,16 +764,6 @@ function SettingsTab({ addToast }) {
         {scanners.length === 0 && <div style={{color:'var(--text-muted)'}}>No plugins installed</div>}
       </div>
 
-      <h3 style={{marginTop:24, marginBottom:16}}>Schedule</h3>
-      <div className="settings-grid">
-        {schedule.length > 0 ? schedule.map((s, i) => (
-          <div key={i} className="scanner-card">
-            <h3>{s.source}</h3>
-            <div className="scanner-detail">Cron: {s.cronExpr || '—'}</div>
-            <div className="scanner-detail">Next Run: {s.nextRun || '—'}</div>
-          </div>
-        )) : <div style={{color:'var(--text-muted)'}}>No scheduled tasks</div>}
-      </div>
     </div>
   );
 }

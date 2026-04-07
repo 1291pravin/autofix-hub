@@ -19,7 +19,7 @@
  *   AQA_TEAM_SLUG — team slug in the API URL
  *
  * Usage:
- *   node scripts/test-playwright-scan.js https://example.com aqa-main
+ *   node scripts/test-playwright-scan.js https://example.com aqa
  */
 
 const {
@@ -45,7 +45,7 @@ const { dismissCookieConsent: _dismissCookieConsent } = require('./cookie-consen
  * @returns {Promise<object[]>} Raw issues array from the AQA API
  */
 async function _scanSingleUrl(context, page, targetUrl, extensionId, config) {
-  console.log(`  [aqa-main] Scanning: ${targetUrl}`);
+  console.log(`  [aqa] Scanning: ${targetUrl}`);
 
   // Navigate with networkidle fallback
   try {
@@ -160,7 +160,7 @@ function parseEvaluationResponse(apiResponse, pageUrl) {
 /**
  * Scan multiple URLs with the main AQA extension.
  *
- * This is the primary entry point for the aqa-main engine.
+ * This is the primary entry point for the aqa engine.
  *
  * @param {string[]} urls - Array of URLs to scan
  * @param {object} config - Scan configuration
@@ -205,7 +205,7 @@ async function scanWithAQAMainExtension(urls, config = {}) {
           issue._aqa_context = {
             type: 'playwright',
             pageUrl: targetUrl,
-            scanMethod: 'aqa-main-extension',
+            scanMethod: 'aqa-extension',
             scanTimestamp: new Date().toISOString(),
             extensionId,
           };
@@ -213,13 +213,13 @@ async function scanWithAQAMainExtension(urls, config = {}) {
 
         allIssues.push(...issues);
       } catch (err) {
-        console.error(`    [aqa-main] Failed to scan ${targetUrl}: ${err.message}`);
+        console.error(`    [aqa] Failed to scan ${targetUrl}: ${err.message}`);
       } finally {
         if (page) await page.close().catch(() => {});
       }
     }
 
-    console.log(`  [aqa-main] Total issues: ${allIssues.length}`);
+    console.log(`  [aqa] Total issues: ${allIssues.length}`);
     return allIssues;
 
   } finally {

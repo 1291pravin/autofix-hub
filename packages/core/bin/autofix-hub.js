@@ -40,14 +40,6 @@ program
   });
 
 program
-  .command('schedule-status')
-  .description('Show scheduled fetch times')
-  .action(async () => {
-    const { scheduleStatusCommand } = require('../src/commands/scheduleStatus');
-    await scheduleStatusCommand();
-  });
-
-program
   .command('status <id> <newStatus>')
   .description('Transition issue status')
   .action(async (id, newStatus) => {
@@ -72,10 +64,37 @@ for (const [name, plugin] of plugins) {
 
   sourceCmd
     .command('fetch')
-    .description(`Fetch issues from ${plugin.displayName || name}`)
-    .action(async () => {
+    .description(`Fetch issues from ${plugin.displayName || name}, normalize, score, cluster, and store in DB`)
+    .option('--method <method>', 'Scanning method: api or playwright', 'api')
+    .option('--engine <engine>', 'Playwright scan engine: axe or aqa', 'axe')
+    .option('--urls <urls>', 'Comma-separated URLs to scan (playwright method)')
+    .option('--api-key <key>', 'API key (overrides .env)')
+    .option('--team-slug <slug>', 'Team slug (overrides .env)')
+    .option('--test-id <id>', 'Test ID for API method (overrides .env)')
+    .option('--suite-id <id>', 'Suite ID (for aqa engine)')
+    .option('--ruleset <id>', 'Ruleset ID (default: wcag22)')
+    .option('--headless', 'Run browser in headless mode')
+    .option('--dry-run', 'Show what would be fetched without writing to DB')
+    .option('--json', 'Output results as JSON')
+    .action(async (opts) => {
       const { fetchCommand } = require('../src/commands/fetch');
-      await fetchCommand(name);
+      await fetchCommand(name, opts);
+    });
+
+  sourceCmd
+    .command('scan [url]')
+    .description(`Quick scan — run accessibility check on a URL, print results (no DB)`)
+    .option('--engine <engine>', 'Scan engine: axe or aqa', 'axe')
+    .option('--urls <urls>', 'Comma-separated URLs (alternative to positional arg)')
+    .option('--api-key <key>', 'API key (for aqa engine)')
+    .option('--team-slug <slug>', 'Team slug (for aqa engine)')
+    .option('--suite-id <id>', 'Suite ID (for aqa engine)')
+    .option('--ruleset <id>', 'Ruleset ID (default: wcag22)')
+    .option('--headless', 'Run browser in headless mode')
+    .option('--format <format>', 'Output format: table, json, or summary', 'table')
+    .action(async (url, opts) => {
+      const { scanCommand } = require('../src/commands/scan');
+      await scanCommand(name, url, opts);
     });
 
   sourceCmd
