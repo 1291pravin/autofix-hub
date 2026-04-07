@@ -25,5 +25,8 @@
   },
   "dependencies": {
     "@autofix-hub/core": "workspace:*"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.40.0"
   }
 }

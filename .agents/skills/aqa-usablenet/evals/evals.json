@@ -1,0 +1,29 @@
+{
+  "skill_name": "aqa-usablenet",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "List all my AQA suites and tell me how many flows each one has",
+      "expected_output": "Should call GET /a11y/suites, display a table of suites with their IDs, names, flow counts, and crawler counts. Should validate env vars and connectivity first.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Create a new flow called 'Contact Page' for suite TS612 with URL https://example.com/contact",
+      "expected_output": "Should call POST /a11y/suites/TS612/flows/url/create with the correct name and URL in the body. Should report back the new flow ID.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I have run ID A3687-1747995246509. Get me all the accessibility issues from that run grouped by severity.",
+      "expected_output": "Should first GET the run details to check status, then GET /flows to list all flows in the run, then GET issues for each flow. Should aggregate and display issues sorted by impact: critical > serious > moderate > minor, grouped by ruleId.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Fix the accessibility issues in my suite TS612. The site is a Next.js app in this repo.",
+      "expected_output": "Should follow the full remediation workflow: validate env vars, get suite details for TS612, collect flow/crawler IDs, create a test with rulesetPackId v2 and rulesetId wcag22, trigger a run, poll until ready, fetch issues for all flows/pages, sort by severity, map issues to source files using Next.js routing patterns (app/ or pages/), apply fixes for up to 20 issues in severity order using the remediation guidance, run build and tests, and create a PR with conventional commit format.",
+      "files": []
+    }
+  ]
+}

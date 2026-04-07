@@ -37,3 +37,11 @@ pnpm-debug.log*
 # Build output
 dist/
 build/
+
+# AQA extensions (binary files, not committed — keep .gitkeep and README)
+packages/plugin-aqa/extensions/aqa-page-capture/*
+!packages/plugin-aqa/extensions/aqa-page-capture/.gitkeep
+!packages/plugin-aqa/extensions/aqa-page-capture/README.md
+packages/plugin-aqa/extensions/main-aqa-extension/*
+!packages/plugin-aqa/extensions/main-aqa-extension/.gitkeep
+!packages/plugin-aqa/extensions/main-aqa-extension/README.md
