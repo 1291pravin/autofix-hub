@@ -27,6 +27,7 @@
     "@autofix-hub/core": "workspace:*"
   },
   "optionalDependencies": {
-    "playwright": "^1.40.0"
+    "jszip": "^3.10.1",
+    "playwright": "^1.59.1"
   }
 }

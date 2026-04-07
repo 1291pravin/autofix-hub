@@ -38,6 +38,9 @@ pnpm-debug.log*
 dist/
 build/
 
+# Temporary / sample data
+packages/tmp/
+
 # AQA extensions (binary files, not committed — keep .gitkeep and README)
 packages/plugin-aqa/extensions/aqa-page-capture/*
 !packages/plugin-aqa/extensions/aqa-page-capture/.gitkeep

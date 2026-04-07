@@ -24,9 +24,5 @@
   "scripts": {
     "dev": "pnpm --filter @autofix-hub/core run dev",
     "test": "pnpm -r run test"
-  },
-  "dependencies": {
-    "jszip": "^3.10.1",
-    "playwright": "^1.59.1"
   }
 }
