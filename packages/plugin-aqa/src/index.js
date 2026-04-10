@@ -293,10 +293,21 @@ module.exports = {
       } catch (_) {}
     }
 
-    // Get run metadata
-    const runMeta = await apiRequest(baseUrl, `/a11y/runs/${runId}`, config.api_key);
-    const deviceInfo = runMeta.deviceInfo || null;
-    const epoch = runMeta.epoch || null;
+    // Get run metadata (optional - endpoint may not be supported)
+    let deviceInfo = null;
+    let epoch = null;
+    try {
+      const runMeta = await apiRequest(baseUrl, `/a11y/runs/${runId}`, config.api_key);
+      deviceInfo = runMeta.deviceInfo || null;
+      epoch = runMeta.epoch || null;
+    } catch (err) {
+      // If the runs endpoint is not supported (501), continue without run metadata
+      if (err.message.includes('501') || err.message.includes('api_not_supported')) {
+        console.warn('Warning: Run metadata endpoint not supported, continuing without device info and epoch');
+      } else {
+        throw err;
+      }
+    }
 
     const allIssues = [];
 
@@ -366,8 +377,8 @@ module.exports = {
                 suiteId,
                 suiteName,
                 rulesetId,
-                runEpoch: runMeta.epoch || null,
-                deviceInfo: runMeta.deviceInfo || null,
+                runEpoch: epoch || null,
+                deviceInfo: deviceInfo || null,
                 // Element identification helpers
                 issueAqaId: issue.id || null,
                 selectorOccurrence: selectorSeen[sel],
@@ -435,8 +446,8 @@ module.exports = {
               suiteId,
               suiteName,
               rulesetId,
-              runEpoch: runMeta.epoch || null,
-              deviceInfo: runMeta.deviceInfo || null,
+              runEpoch: epoch || null,
+              deviceInfo: deviceInfo || null,
               // Element identification helpers
               issueAqaId: issue.id || null,
               selectorOccurrence: selectorSeen[sel],

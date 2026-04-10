@@ -204,6 +204,59 @@ function createApp() {
     res.json({ clusters });
   });
 
+  // Get batch prompt for a cluster
+  app.get('/api/clusters/:id/prompt', async (req, res) => {
+    try {
+      const db = getDb();
+      initSchema();
+
+      const clusterId = req.params.id;
+      const cluster = db.prepare('SELECT * FROM clusters WHERE id = ?').get(clusterId);
+      
+      if (!cluster) {
+        return res.status(404).json({ error: 'Cluster not found' });
+      }
+
+      const clusterIssues = db.prepare(`
+        SELECT * FROM issues
+        WHERE cluster_id = ? AND status = 'open' AND is_duplicate = 0
+        ORDER BY impact_score DESC
+      `).all(clusterId);
+
+      if (clusterIssues.length === 0) {
+        return res.json({ prompt: '', message: 'No open issues in cluster' });
+      }
+
+      // Load plugin and try to get batch prompt
+      const plugins = loadPlugins();
+      const plugin = plugins.get(cluster.source);
+
+      let fixPrompt = '';
+      if (plugin && typeof plugin.batchPromptTemplate === 'function') {
+        fixPrompt = plugin.batchPromptTemplate(clusterIssues);
+      } else {
+        // Fallback: concatenate individual prompts with dashboard format
+        const promptIssues = clusterIssues.filter(i => i.fix_prompt);
+        if (promptIssues.length > 0) {
+          fixPrompt = `# Cluster Fix: ${cluster.cluster_key || cluster.id}\n\n${cluster.root_cause ? `> **Root Cause:** ${cluster.root_cause}\n\n` : ''}${promptIssues.map((issue) => `---\n\n${issue.fix_prompt}`).join('\n\n')}`;
+        }
+      }
+
+      res.json({ 
+        prompt: fixPrompt,
+        cluster: {
+          id: cluster.id,
+          clusterKey: cluster.cluster_key,
+          source: cluster.source,
+          issueCount: clusterIssues.length,
+          rootCause: cluster.root_cause
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Metrics
   app.get('/api/metrics/mttf', (req, res) => {
     const { source, severity } = req.query;

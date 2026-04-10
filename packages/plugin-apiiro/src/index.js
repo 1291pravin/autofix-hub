@@ -4,6 +4,8 @@ const { execSync } = require('child_process');
 const path = require('path');
 const crypto = require('crypto');
 
+const TLS_ENV = { ...process.env, NODE_TLS_REJECT_UNAUTHORIZED: '0' };
+
 // Severity mapping: Apiiro → normalized
 const SEVERITY_MAP = {
   'CRITICAL': 'critical',
@@ -286,7 +288,7 @@ module.exports = {
 
   checkInstalled: async () => {
     try {
-      const version = execSync('apiiro --version', { encoding: 'utf8', timeout: 10000 }).trim();
+      const version = execSync('apiiro --version', { encoding: 'utf8', timeout: 10000, env: TLS_ENV }).trim();
       return { installed: true, message: version };
     } catch (_) {
       return { installed: false, message: 'Apiiro CLI not found. Install from: https://docs.apiiro.com/cli/install' };
@@ -300,6 +302,7 @@ module.exports = {
         encoding: 'utf8',
         timeout: 15000,
         stdio: ['pipe', 'pipe', 'pipe'],
+        env: TLS_ENV,
       });
       return { authenticated: true, message: 'Authenticated' };
     } catch (err) {
@@ -340,6 +343,7 @@ module.exports = {
           encoding: 'utf8',
           timeout: 120000,
           maxBuffer: 100 * 1024 * 1024,
+          env: TLS_ENV,
         });
         
         if (fs.existsSync(tempFile)) {
@@ -369,6 +373,7 @@ module.exports = {
           encoding: 'utf8',
           timeout: 120000,
           maxBuffer: 100 * 1024 * 1024,
+          env: TLS_ENV,
         });
         
         console.log(`CLI output length: ${output.length} characters`);

@@ -1421,6 +1421,8 @@ function ClusterDetailPage({ clusterId, addToast }) {
   const [rejectId, setRejectId] = useState(null);
   const [copied, setCopied] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [batchPrompt, setBatchPrompt] = useState('');
+  const [promptLoading, setPromptLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -1433,6 +1435,15 @@ function ClusterDetailPage({ clusterId, addToast }) {
     ])
       .catch(e => addToast(e.message, 'error'))
       .finally(() => setLoading(false));
+  }, [clusterId]);
+
+  useEffect(() => {
+    if (!clusterId) return;
+    setPromptLoading(true);
+    api(`/clusters/${clusterId}/prompt`)
+      .then(response => { setBatchPrompt(response.prompt || ''); })
+      .catch(() => { setBatchPrompt(''); })
+      .finally(() => setPromptLoading(false));
   }, [clusterId]);
 
   const viewDetail = (id) => {
@@ -1503,41 +1514,36 @@ function ClusterDetailPage({ clusterId, addToast }) {
 
       {rejectId && <RejectModal issueId={rejectId} onClose={() => setRejectId(null)} onReject={handleReject} />}
 
-      {(() => {
-        const promptIssues = issues.filter(i => i.fix_prompt);
-        if (promptIssues.length === 0) return null;
-        const combinedPrompt = `# Cluster Fix: ${cluster ? (cluster.cluster_key || cluster.id) : clusterId}\n\n${cluster && cluster.root_cause ? `> **Root Cause:** ${cluster.root_cause}\n\n` : ''}${promptIssues.map((issue, idx) => `---\n\n${issue.fix_prompt}`).join('\n\n')}`;
-        const renderMarkdown = (text) => {
-          try { return marked.parse(text); }
-          catch (e) { return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>'); }
-        };
-        const copyClusterPrompt = () => {
-          navigator.clipboard.writeText(combinedPrompt).then(() => {
-            setCopied(true);
-            addToast('Cluster prompt copied to clipboard', 'success');
-            setTimeout(() => setCopied(false), 2000);
-          });
-        };
-        return (
-          <div className="prompt-section" style={{marginBottom:20}}>
-            <div className="prompt-header">
-              <h3 style={{display:'flex', alignItems:'center', gap:8}}>
-                Cluster Prompt
-                <span style={{fontSize:12, color:'var(--text-muted)', fontWeight:400}}>({promptIssues.length} issue{promptIssues.length > 1 ? 's' : ''})</span>
-              </h3>
-              <div style={{display:'flex', gap:8}}>
-                <button className="btn btn-sm" onClick={() => setShowPrompt(p => !p)}>
-                  {showPrompt ? 'Hide' : 'Show'} Prompt
-                </button>
-                <button className={`btn btn-copy-lg ${copied ? 'btn-success' : ''}`} onClick={copyClusterPrompt}>
-                  {Icons.copy} {copied ? 'Copied!' : 'Copy All'}
-                </button>
-              </div>
+      {(batchPrompt || promptLoading) && (
+        <div className="prompt-section" style={{marginBottom:20}}>
+          <div className="prompt-header">
+            <h3 style={{display:'flex', alignItems:'center', gap:8}}>
+              Cluster Prompt
+              <span style={{fontSize:12, color:'var(--text-muted)', fontWeight:400}}>
+                ({promptLoading ? 'Loading...' : `${issues.filter(i => i.fix_prompt).length} issue${issues.filter(i => i.fix_prompt).length > 1 ? 's' : ''}`})
+              </span>
+            </h3>
+            <div style={{display:'flex', gap:8}}>
+              <button className="btn btn-sm" onClick={() => setShowPrompt(p => !p)} disabled={promptLoading}>
+                {showPrompt ? 'Hide' : 'Show'} Prompt
+              </button>
+              <button className={`btn btn-copy-lg ${copied ? 'btn-success' : ''}`} onClick={() => { navigator.clipboard.writeText(batchPrompt).then(() => { setCopied(true); addToast('Cluster prompt copied to clipboard', 'success'); setTimeout(() => setCopied(false), 2000); }); }} disabled={promptLoading || !batchPrompt}>
+                {Icons.copy} {copied ? 'Copied!' : 'Copy All'}
+              </button>
             </div>
-            {showPrompt && <div className="prompt-rendered" dangerouslySetInnerHTML={{__html: renderMarkdown(combinedPrompt)}} />}
           </div>
-        );
-      })()}
+          {showPrompt && (
+            promptLoading ? (
+              <div style={{textAlign:'center', padding:40, color:'var(--text-muted)'}}>
+                <div className="spinner"></div>
+                <div style={{marginTop:10}}>Generating batch prompt...</div>
+              </div>
+            ) : (
+              <div className="prompt-rendered" dangerouslySetInnerHTML={{__html: (() => { try { return marked.parse(batchPrompt); } catch (e) { return batchPrompt.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>'); } })()}} />
+            )
+          )}
+        </div>
+      )}
 
       <div className="table-wrap">
         <IssuesTable
@@ -1609,7 +1615,7 @@ function MetricsPage({ addToast }) {
             <div>
               <div className="detail-row"><span className="detail-key">Open Issues</span><span className="detail-value" style={{fontWeight:700,fontSize:22, fontFamily:'var(--font-sans)'}}>{queue.open_count}</span></div>
               <div className="detail-row"><span className="detail-key">Est. Time to Clear</span><span className="detail-value">{queue.estimated_hours ? `${queue.estimated_hours.toFixed(1)}h` : '\u2014'}</span></div>
-              <div className="detail-row"><span className="detail-key">Aging (>7 days)</span><span className="detail-value" style={{color: queue.aging_count > 0 ? 'var(--medium)' : 'var(--success)', fontWeight:600}}>{queue.aging_count}</span></div>
+              <div className="detail-row"><span className="detail-key">Aging (&gt;7 days)</span><span className="detail-value" style={{color: (queue.aging_count > 0) ? 'var(--medium)' : 'var(--success)', fontWeight:600}}>{queue.aging_count}</span></div>
             </div>
           ) : <div className="loading"><div className="spinner" /></div>}
         </div>
