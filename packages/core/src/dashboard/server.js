@@ -227,6 +227,23 @@ function createApp() {
         return res.json({ prompt: '', message: 'No open issues in cluster' });
       }
 
+      // Hydrate metadata for all cluster issues in one query
+      const issueIds = clusterIssues.map(i => i.id);
+      const placeholders = issueIds.map(() => '?').join(',');
+      const allMeta = db.prepare(
+        `SELECT issue_id, key, value FROM issue_metadata WHERE issue_id IN (${placeholders})`
+      ).all(...issueIds);
+
+      const metaMap = new Map();
+      for (const row of allMeta) {
+        if (!metaMap.has(row.issue_id)) metaMap.set(row.issue_id, {});
+        const obj = metaMap.get(row.issue_id);
+        try { obj[row.key] = JSON.parse(row.value); } catch (_) { obj[row.key] = row.value; }
+      }
+      for (const issue of clusterIssues) {
+        issue.metadata = metaMap.get(issue.id) || {};
+      }
+
       // Load plugin and try to get batch prompt
       const plugins = loadPlugins();
       const plugin = plugins.get(cluster.source);
