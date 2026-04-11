@@ -8,7 +8,7 @@ const git = require('./git');
  * Called automatically when status transitions to 'ai_fixed'.
  */
 function checkAutoApprove(issue, db) {
-  const enabled = process.env.AUTO_APPROVE_ENABLED === 'true';
+  const enabled = true; // auto-approve enabled by default
   if (!enabled) {
     logDecision(db, issue.id, 'skipped', 'Auto-approve disabled', null);
     return;
@@ -37,7 +37,7 @@ function checkAutoApprove(issue, db) {
 
   // Parse diff stats: count total lines changed
   const { filesChanged, linesChanged } = parseDiffStat(diffStats);
-  const maxLines = parseInt(process.env.AUTO_APPROVE_MAX_LINES || '10', 10);
+  const maxLines = 10;
 
   if (linesChanged > maxLines) {
     logDecision(db, issue.id, 'blocked', `Diff too large: ${linesChanged} lines (max ${maxLines})`, diffStats);

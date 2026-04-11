@@ -779,6 +779,93 @@ td.desc { white-space: normal; max-width: 320px; overflow: hidden; text-overflow
 .s-dot.gray { background: var(--info); }
 .scanner-detail { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-family: var(--font-mono); }
 
+/* ─── Settings Sections ──────────────────────────── */
+.settings-section {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+}
+.settings-section-title {
+  font-size: 16px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+.settings-section-title svg {
+  width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0;
+}
+.settings-section-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+.env-group-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted); font-weight: 600; margin: 20px 0 10px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.env-group-title:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
+.env-field { margin-bottom: 14px; }
+.env-field label {
+  display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 4px; font-family: var(--font-mono);
+}
+.env-field .env-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.env-field input, .env-field select {
+  width: 100%; font-family: var(--font-mono); font-size: 13px;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-input); color: var(--text); transition: all var(--transition);
+}
+.env-field input:focus, .env-field select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.env-field .toggle-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.toggle-switch {
+  position: relative; width: 40px; height: 22px; cursor: pointer;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--border); border-radius: 11px; transition: all var(--transition);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); }
+.toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; transition: all var(--transition);
+}
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+.toggle-label { font-size: 13px; color: var(--text-secondary); }
+.settings-actions { display: flex; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.scanner-setup-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+}
+.scanner-setup-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.scanner-setup-header h3 {
+  font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+}
+.scanner-status-badges { display: flex; gap: 8px; }
+.status-badge {
+  font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 12px; font-family: var(--font-mono);
+}
+.status-badge.ok { background: var(--success-bg); color: var(--success); }
+.status-badge.err { background: var(--critical-bg); color: var(--critical); }
+.status-badge.pending { background: var(--medium-bg); color: var(--medium); }
+.status-badge.running { background: var(--low-bg); color: var(--low); }
+.scanner-cred-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.scanner-cred-form .env-field { margin-bottom: 0; }
+.scanner-install-bar {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: var(--bg-input); border-radius: var(--radius-sm); margin-bottom: 16px;
+  font-size: 13px;
+}
+.scanner-install-bar .install-status { flex: 1; color: var(--text-secondary); }
+.log-output {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 14px; margin-top: 10px; max-height: 120px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-all;
+}
+
 /* ─── Overview Sections ───────────────────────────── */
 .overview-grid {
   display: grid;
@@ -989,6 +1076,12 @@ const Icons = {
   check: <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>,
   alertTriangle: <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   eye: <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  terminal: <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>,
+};
+
+const buildFixCommand = (source, type, id) => {
+  if (type === 'cluster') return `/autofix ${source} fix-cluster ${id}`;
+  return `/autofix ${source} fix ${id}`;
 };
 
 // ─── Hash Router ───────────────────────────────────────────
@@ -1129,6 +1222,15 @@ function IssueDetailPage({ issueId, addToast }) {
           {(issue.status === 'ai_fixed' || issue.status === 'in_progress') && (
             <button className="btn btn-danger" onClick={() => setRejectId(issue.id)}>Reject</button>
           )}
+          {issue.status === 'open' && (
+            <button className="btn" style={{color:'var(--warning)'}} onClick={() => {
+              navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)).then(() => {
+                addToast('Fix command copied to clipboard', 'success');
+              });
+            }}>
+              {Icons.terminal} Fix Command
+            </button>
+          )}
         </div>
       </div>
 
@@ -1158,9 +1260,20 @@ function IssueDetailPage({ issueId, addToast }) {
         <div className="prompt-section">
           <div className="prompt-header">
             <h3>Fix Prompt</h3>
-            <button className={`btn btn-copy-lg ${copied ? 'btn-success' : ''}`} onClick={copyPrompt}>
-              {Icons.copy} {copied ? 'Copied!' : 'Copy Prompt'}
-            </button>
+            <div style={{display:'flex', gap:8}}>
+              <button className={`btn btn-copy-lg ${copied ? 'btn-success' : ''}`} onClick={copyPrompt}>
+                {Icons.copy} {copied ? 'Copied!' : 'Copy Prompt'}
+              </button>
+              {issue.status === 'open' && (
+                <button className="btn btn-copy-lg" style={{color:'var(--warning)'}} onClick={() => {
+                  navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)).then(() => {
+                    addToast('Fix command copied to clipboard', 'success');
+                  });
+                }}>
+                  {Icons.terminal} Copy Fix Command
+                </button>
+              )}
+            </div>
           </div>
           <div className="prompt-rendered" dangerouslySetInnerHTML={{__html: renderMarkdown(issue.fix_prompt)}} />
         </div>
@@ -1187,7 +1300,7 @@ function IssueDetailPage({ issueId, addToast }) {
 }
 
 // ─── Issues Table (shared) ─────────────────────────────────
-function IssuesTable({ issues, loading, onViewDetail, onChangeStatus, onReject, onCopyPrompt }) {
+function IssuesTable({ issues, loading, onViewDetail, onChangeStatus, onReject, onCopyPrompt, onCopyFixCommand }) {
   if (loading) return <div className="loading"><div className="spinner" /></div>;
   if (issues.length === 0) return <div className="empty"><h3>No issues found</h3><p>Run a fetch command to populate issues.</p></div>;
 
@@ -1232,6 +1345,9 @@ function IssuesTable({ issues, loading, onViewDetail, onChangeStatus, onReject, 
                 )}
                 {issue.fix_prompt && (
                   <button className="btn btn-sm btn-ghost" onClick={() => onCopyPrompt(issue)} title="Copy prompt">{Icons.copy}</button>
+                )}
+                {issue.status === 'open' && (
+                  <button className="btn btn-sm btn-ghost" style={{color:'var(--warning)'}} onClick={() => onCopyFixCommand(issue)} title="Copy fix command">{Icons.terminal}</button>
                 )}
               </div>
             </td>
@@ -1327,6 +1443,7 @@ function IssuesPage({ sourceFilter, addToast }) {
           onChangeStatus={changeStatus}
           onReject={setRejectId}
           onCopyPrompt={(issue) => { navigator.clipboard.writeText(issue.fix_prompt); addToast('Copied', 'success'); }}
+          onCopyFixCommand={(issue) => { navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)); addToast('Fix command copied', 'success'); }}
         />
       </div>
 
@@ -1347,6 +1464,7 @@ function IssuesPage({ sourceFilter, addToast }) {
 function ClustersPage({ addToast }) {
   const [clusters, setClusters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sourceFilter, setSourceFilter] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -1356,6 +1474,9 @@ function ClustersPage({ addToast }) {
       .finally(() => setLoading(false));
   }, []);
 
+  const sources = [...new Set(clusters.map(c => c.source).filter(Boolean))].sort();
+  const filtered = sourceFilter ? clusters.filter(c => c.source === sourceFilter) : clusters;
+
   if (loading) return <div className="loading"><div className="spinner" /></div>;
 
   return (
@@ -1363,18 +1484,26 @@ function ClustersPage({ addToast }) {
       <div className="page-header">
         <div>
           <h1 className="page-title">Clusters</h1>
-          <p className="page-subtitle">{clusters.length} cluster{clusters.length !== 1 ? 's' : ''} grouping related issues</p>
+          <p className="page-subtitle">{filtered.length} cluster{filtered.length !== 1 ? 's' : ''} grouping related issues</p>
         </div>
       </div>
 
-      {clusters.length === 0 ? (
+      <div className="filter-bar">
+        <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>
+          <option value="">All Sources</option>
+          {sources.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span className="filter-count">{filtered.length} of {clusters.length} clusters</span>
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="empty">
-          <h3>No clusters yet</h3>
+          <h3>{sourceFilter ? `No clusters for "${sourceFilter}"` : 'No clusters yet'}</h3>
           <p>Clusters are created automatically when related issues are detected during fetch.</p>
         </div>
       ) : (
         <div className="cluster-grid">
-          {clusters.map(c => (
+          {filtered.map(c => (
             <div key={c.id} className="cluster-card" onClick={() => navigate(`#/clusters/${c.id}`)}>
               <div className="cluster-card-header">
                 <div className="cluster-card-key">{c.cluster_key || c.id.slice(0,12)}</div>
@@ -1501,6 +1630,15 @@ function ClusterDetailPage({ clusterId, addToast }) {
                 </div>
               )}
             </div>
+            {cluster.status === 'open' && (
+              <button className="btn" style={{color:'var(--warning)', marginTop:12}} onClick={() => {
+                navigator.clipboard.writeText(buildFixCommand(cluster.source, 'cluster', cluster.id)).then(() => {
+                  addToast('Fix-cluster command copied', 'success');
+                });
+              }}>
+                {Icons.terminal} Copy Fix Command
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -1530,6 +1668,13 @@ function ClusterDetailPage({ clusterId, addToast }) {
               <button className={`btn btn-copy-lg ${copied ? 'btn-success' : ''}`} onClick={() => { navigator.clipboard.writeText(batchPrompt).then(() => { setCopied(true); addToast('Cluster prompt copied to clipboard', 'success'); setTimeout(() => setCopied(false), 2000); }); }} disabled={promptLoading || !batchPrompt}>
                 {Icons.copy} {copied ? 'Copied!' : 'Copy All'}
               </button>
+              <button className="btn btn-copy-lg" style={{color:'var(--warning)'}} onClick={() => {
+                navigator.clipboard.writeText(buildFixCommand(cluster ? cluster.source : '', 'cluster', clusterId)).then(() => {
+                  addToast('Fix-cluster command copied', 'success');
+                });
+              }}>
+                {Icons.terminal} Copy Fix Command
+              </button>
             </div>
           </div>
           {showPrompt && (
@@ -1553,6 +1698,7 @@ function ClusterDetailPage({ clusterId, addToast }) {
           onChangeStatus={changeStatus}
           onReject={setRejectId}
           onCopyPrompt={(issue) => { navigator.clipboard.writeText(issue.fix_prompt); addToast('Copied', 'success'); }}
+          onCopyFixCommand={(issue) => { navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)); addToast('Fix command copied', 'success'); }}
         />
       </div>
     </div>
@@ -1728,10 +1874,30 @@ function SettingsPage({ addToast }) {
   const [scanners, setScanners] = useState([]);
   const [testResults, setTestResults] = useState({});
   const [testing, setTesting] = useState({});
+  // Scanner credential state
+  const [scannerFields, setScannerFields] = useState({});
+  const [scannerCreds, setScannerCreds] = useState({});
+  const [credSaving, setCredSaving] = useState({});
+  // Apiiro install/login state
+  const [apiiroInstalling, setApiiroInstalling] = useState(false);
+  const [apiiroLoggingIn, setApiiroLoggingIn] = useState(false);
+  const [apiiroInstallLog, setApiiroInstallLog] = useState('');
+  const [apiiroLoginLog, setApiiroLoginLog] = useState('');
 
   useEffect(() => {
     api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
   }, []);
+
+  // Load setup fields for each scanner
+  useEffect(() => {
+    if (scanners.length === 0) return;
+    scanners.forEach(s => {
+      api(`/scanners/${s.name}/setup-fields`).then(d => {
+        setScannerFields(prev => ({...prev, [s.name]: d.fields || []}));
+        setScannerCreds(prev => ({...prev, [s.name]: d.saved || {}}));
+      }).catch(() => {});
+    });
+  }, [scanners]);
 
   const testConnection = async (source) => {
     setTesting(t => ({...t, [source]: true}));
@@ -1746,36 +1912,206 @@ function SettingsPage({ addToast }) {
     setTesting(t => ({...t, [source]: false}));
   };
 
+  // Save scanner credentials
+  const saveCreds = async (source) => {
+    setCredSaving(prev => ({...prev, [source]: true}));
+    try {
+      await api(`/scanners/${source}/config`, {
+        method: 'POST',
+        body: scannerCreds[source] || {},
+      });
+      addToast(`${source} credentials saved`, 'success');
+    } catch (e) {
+      addToast(`Save failed: ${e.message}`, 'error');
+    }
+    setCredSaving(prev => ({...prev, [source]: false}));
+  };
+
+  const updateCred = (source, key, value) => {
+    setScannerCreds(prev => ({
+      ...prev,
+      [source]: {...(prev[source] || {}), [key]: value}
+    }));
+  };
+
+  // Apiiro install
+  const installApiiro = async () => {
+    setApiiroInstalling(true);
+    setApiiroInstallLog('Starting install...');
+    try {
+      await api('/scanners/apiiro/install', { method: 'POST' });
+      // Poll for completion
+      const poll = setInterval(async () => {
+        try {
+          const status = await api('/scanners/apiiro/process/install');
+          if (status.status === 'success') {
+            clearInterval(poll);
+            setApiiroInstalling(false);
+            setApiiroInstallLog(status.stdout || 'Installed successfully');
+            addToast('Apiiro CLI installed', 'success');
+            testConnection('apiiro');
+          } else if (status.status === 'failed') {
+            clearInterval(poll);
+            setApiiroInstalling(false);
+            setApiiroInstallLog(status.stderr || 'Install failed');
+            addToast('Apiiro CLI install failed', 'error');
+          } else {
+            setApiiroInstallLog('Installing...');
+          }
+        } catch (_) {}
+      }, 2000);
+    } catch (e) {
+      setApiiroInstalling(false);
+      setApiiroInstallLog(e.message);
+      addToast(`Install failed: ${e.message}`, 'error');
+    }
+  };
+
+  // Apiiro login
+  const loginApiiro = async () => {
+    setApiiroLoggingIn(true);
+    setApiiroLoginLog('Opening browser for login...');
+    try {
+      const r = await api('/scanners/apiiro/login', { method: 'POST' });
+      setApiiroLoginLog(r.message || 'Waiting for browser auth...');
+      // Poll for completion
+      const poll = setInterval(async () => {
+        try {
+          const status = await api('/scanners/apiiro/process/login');
+          if (status.status === 'success') {
+            clearInterval(poll);
+            setApiiroLoggingIn(false);
+            setApiiroLoginLog('Login successful');
+            addToast('Apiiro login successful', 'success');
+            testConnection('apiiro');
+          } else if (status.status === 'failed') {
+            clearInterval(poll);
+            setApiiroLoggingIn(false);
+            setApiiroLoginLog(status.stderr || 'Login failed');
+            addToast('Apiiro login failed', 'error');
+          }
+        } catch (_) {}
+      }, 3000);
+    } catch (e) {
+      setApiiroLoggingIn(false);
+      setApiiroLoginLog(e.message);
+      addToast(`Login failed: ${e.message}`, 'error');
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">Settings</h1>
-          <p className="page-subtitle">Scanner configuration and connection testing</p>
+          <p className="page-subtitle">Scanner credentials and connections</p>
         </div>
       </div>
 
-      <div className="settings-grid">
+      {/* ── Scanner Setup ── */}
+      <div className="settings-section">
+        <div className="settings-section-title">{Icons.shield} Scanner Setup</div>
+        <div className="settings-section-sub">Configure credentials and test connections for each scanner</div>
+
         {scanners.map(s => {
           const result = testResults[s.name];
-          const statusColor = result
-            ? (result.error ? 'red' : (result.installed?.installed ? 'green' : 'red'))
-            : 'gray';
+          const fields = scannerFields[s.name] || [];
+          const creds = scannerCreds[s.name] || {};
+          const isInstalled = result?.installed?.installed;
+          const isAuthed = result?.auth?.authenticated;
+          const isApiiro = s.name === 'apiiro';
+
           return (
-            <div key={s.name} className="scanner-card">
-              <h3><span className={`s-dot ${statusColor}`} /> {s.displayName || s.name}</h3>
-              <div className="scanner-detail">@autofix-hub/plugin-{s.name}</div>
-              <div className="scanner-detail">Installed: {s.installed ? 'Yes' : 'No'}</div>
-              {result && !result.error && (
+            <div key={s.name} className="scanner-setup-card">
+              <div className="scanner-setup-header">
+                <h3>
+                  <span className={`s-dot ${result ? (result.error ? 'red' : ((isApiiro ? isInstalled !== false : true) ? 'green' : 'red')) : 'gray'}`} />
+                  {s.displayName || s.name}
+                  <span style={{fontSize:11, color:'var(--text-muted)', fontFamily:'var(--font-mono)', fontWeight:400}}>@autofix-hub/plugin-{s.name}</span>
+                </h3>
+                <div className="scanner-status-badges">
+                  {isApiiro && result && !result.error && result.installed && (
+                    <span className={`status-badge ${isInstalled ? 'ok' : 'err'}`}>
+                      {isInstalled ? 'CLI OK' : 'CLI Missing'}
+                    </span>
+                  )}
+                  {result && !result.error && result.auth && (
+                    <span className={`status-badge ${isAuthed ? 'ok' : 'err'}`}>
+                      {isAuthed ? 'Authenticated' : 'Not Authenticated'}
+                    </span>
+                  )}
+                  {!result && <span className="status-badge pending">Not tested</span>}
+                  {result?.error && <span className="status-badge err">Error</span>}
+                </div>
+              </div>
+
+              {/* Apiiro-specific: install + login */}
+              {isApiiro && (
                 <div>
-                  {result.installed && <div className="scanner-detail">CLI: {result.installed.installed ? result.installed.message || 'OK' : 'Not found'}</div>}
-                  {result.auth && <div className="scanner-detail">Auth: {result.auth.authenticated ? 'OK' : result.auth.message || 'Not authenticated'}</div>}
+                  <div className="scanner-install-bar">
+                    <span className="install-status">
+                      {result?.installed?.installed
+                        ? `Apiiro CLI: ${result.installed.message || 'installed'}`
+                        : 'Apiiro CLI not installed'}
+                    </span>
+                    <button className="btn btn-sm" onClick={installApiiro} disabled={apiiroInstalling}>
+                      {apiiroInstalling ? 'Installing...' : 'Install CLI'}
+                    </button>
+                    <button className="btn btn-sm btn-primary" onClick={loginApiiro} disabled={apiiroLoggingIn}>
+                      {apiiroLoggingIn ? 'Logging in...' : 'Login'}
+                    </button>
+                  </div>
+                  {(apiiroInstallLog || apiiroLoginLog) && (
+                    <div className="log-output">{apiiroInstallLog || apiiroLoginLog}</div>
+                  )}
                 </div>
               )}
-              {result && result.error && <div className="scanner-detail" style={{color:'var(--critical)'}}>Error: {result.error}</div>}
-              <button className="btn btn-sm" style={{marginTop:10}} onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
-                {testing[s.name] ? 'Testing...' : 'Test Connection'}
-              </button>
+
+              {/* Credential form */}
+              {fields.length > 0 && (
+                <div>
+                  <div className="scanner-cred-form">
+                    {fields.map(f => (
+                      <div key={f.name} className="env-field">
+                        <label>{f.name}</label>
+                        {f.message && <div className="env-desc">{f.message}</div>}
+                        <input
+                          type={/key|token|password|secret/i.test(f.name) ? 'password' : 'text'}
+                          value={creds[f.name] || ''}
+                          placeholder={f.default || ''}
+                          onChange={e => updateCred(s.name, f.name, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="settings-actions">
+                    <button className="btn btn-primary btn-sm" onClick={() => saveCreds(s.name)} disabled={credSaving[s.name]}>
+                      {credSaving[s.name] ? 'Saving...' : 'Save Credentials'}
+                    </button>
+                    <button className="btn btn-sm" onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
+                      {testing[s.name] ? 'Testing...' : 'Test Connection'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {fields.length === 0 && !isApiiro && (
+                <div style={{display:'flex', gap:10, alignItems:'center'}}>
+                  <span style={{fontSize:13, color:'var(--text-muted)'}}>No credentials required</span>
+                  <button className="btn btn-sm" onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
+                    {testing[s.name] ? 'Testing...' : 'Test Connection'}
+                  </button>
+                </div>
+              )}
+
+              {/* Connection test details */}
+              {result && !result.error && (
+                <div style={{marginTop:12, fontSize:12, color:'var(--text-muted)'}}>
+                  {isApiiro && result.installed && <div>CLI: {result.installed.message || (result.installed.installed ? 'OK' : 'Not found')}</div>}
+                  {result.auth && <div>Auth: {result.auth.message || (result.auth.authenticated ? 'OK' : 'Not authenticated')}</div>}
+                </div>
+              )}
+              {result?.error && <div style={{marginTop:12, fontSize:12, color:'var(--critical)'}}>Error: {result.error}</div>}
             </div>
           );
         })}
@@ -1786,9 +2122,40 @@ function SettingsPage({ addToast }) {
 }
 
 // ─── Overview Page ─────────────────────────────────────────
-function OverviewPage({ stats, clusters, scanHistory, addToast }) {
+function OverviewPage({ stats, clusters, scanHistory, addToast, onRefresh }) {
   const severities = ['critical', 'high', 'medium', 'low', 'info'];
   const sevColors = { critical: 'var(--critical)', high: 'var(--high)', medium: 'var(--medium)', low: 'var(--low)', info: 'var(--info)' };
+  const [fetching, setFetching] = useState({});
+  const [scanners, setScanners] = useState([]);
+
+  useEffect(() => {
+    api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
+  }, []);
+
+  const fetchSource = async (source) => {
+    setFetching(prev => ({...prev, [source]: true}));
+    try {
+      const result = await api(`/scanners/${source}/fetch`, {
+        method: 'POST',
+        body: {},
+      });
+      if (result.success) {
+        addToast(`${source}: fetch complete`, 'success');
+        if (onRefresh) onRefresh();
+      } else {
+        addToast(`${source}: ${result.error || 'fetch failed'}`, 'error');
+      }
+    } catch (e) {
+      addToast(`${source}: ${e.message}`, 'error');
+    }
+    setFetching(prev => ({...prev, [source]: false}));
+  };
+
+  const fetchAll = async () => {
+    for (const s of scanners) {
+      await fetchSource(s.name);
+    }
+  };
 
   const sevCounts = useMemo(() => {
     if (!stats || !stats.by_severity) return {};
@@ -1800,6 +2167,7 @@ function OverviewPage({ stats, clusters, scanHistory, addToast }) {
   }, [sevCounts]);
 
   const topClusters = (clusters || []).slice(0, 5);
+  const anyFetching = Object.values(fetching).some(Boolean);
 
   return (
     <div>
@@ -1809,12 +2177,14 @@ function OverviewPage({ stats, clusters, scanHistory, addToast }) {
           <p className="page-subtitle">Dashboard summary for your project</p>
         </div>
         <div className="page-actions">
-          <button className="btn btn-primary" onClick={() => addToast('Use CLI: autofix-hub <source> fetch', 'info')}>
-            {Icons.zap} Fetch All
+          <button className="btn btn-primary" onClick={fetchAll} disabled={anyFetching}>
+            {Icons.zap} {anyFetching ? 'Fetching...' : 'Fetch All'}
           </button>
-          <button className="btn" onClick={() => addToast('Use CLI: autofix-hub <source> fix-next', 'info')}>
-            {Icons.shield} Fix Next
-          </button>
+          {scanners.map(s => (
+            <button key={s.name} className="btn btn-sm" onClick={() => fetchSource(s.name)} disabled={fetching[s.name]}>
+              {fetching[s.name] ? `${s.name}...` : s.displayName || s.name}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -2086,7 +2456,7 @@ function App() {
   } else if (route === '#/issues') {
     page = <IssuesPage sourceFilter="" addToast={addToast} />;
   } else {
-    page = <OverviewPage stats={stats} clusters={clusters} scanHistory={scanHistory} addToast={addToast} />;
+    page = <OverviewPage stats={stats} clusters={clusters} scanHistory={scanHistory} addToast={addToast} onRefresh={refreshData} />;
   }
 
   return (

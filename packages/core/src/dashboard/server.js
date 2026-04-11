@@ -1,6 +1,9 @@
 'use strict';
 
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const { execSync, spawn } = require('child_process');
 const express = require('express');
 const { getDb } = require('../db');
 const { initSchema, migrateIssueClusters } = require('../setup');
@@ -13,6 +16,7 @@ const {
   getRejectionsByCategory,
   getStats,
 } = require('../metrics');
+const { getProjectRoot, loadCredentials, saveCredentials } = require('../config');
 
 /**
  * Create and configure the Express app.
@@ -319,12 +323,14 @@ function createApp() {
 
       const results = {};
 
+      const creds = loadCredentials()[req.params.source] || {};
+
       if (typeof plugin.checkInstalled === 'function') {
-        results.installed = await plugin.checkInstalled();
+        results.installed = await plugin.checkInstalled(creds);
       }
 
       if (typeof plugin.checkAuth === 'function') {
-        results.auth = await plugin.checkAuth();
+        results.auth = await plugin.checkAuth(creds);
       }
 
       res.json(results);
@@ -335,11 +341,161 @@ function createApp() {
 
   app.post('/api/scanners/:source/config', (req, res) => {
     try {
-      const { loadCredentials, saveCredentials } = require('../config');
       const creds = loadCredentials();
       creds[req.params.source] = { ...creds[req.params.source], ...req.body };
       saveCredentials(creds);
       res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ─── Scanner Setup Fields ─────────────────────────────
+
+  // Get setup prompt fields for a scanner plugin
+  app.get('/api/scanners/:source/setup-fields', (req, res) => {
+    try {
+      const plugins = loadPlugins();
+      const plugin = plugins.get(req.params.source);
+      if (!plugin) {
+        return res.status(404).json({ error: `Plugin ${req.params.source} not found` });
+      }
+
+      const fields = typeof plugin.setupPrompts === 'function' ? plugin.setupPrompts() : [];
+      const creds = loadCredentials();
+      const saved = creds[req.params.source] || {};
+
+      res.json({ fields, saved });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ─── Apiiro CLI Install ───────────────────────────────
+
+  // Track background processes for install/login
+  const _bgProcesses = {};
+
+  app.post('/api/scanners/apiiro/install', (req, res) => {
+    try {
+      const platform = os.platform();
+      const arch = os.arch();
+      let binaryName;
+      let installCmd;
+
+      if (platform === 'win32') {
+        binaryName = 'apiiro-win.exe';
+        const dest = path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'apiiro', 'apiiro.exe');
+        const destDir = path.dirname(dest);
+        // Use powershell to create directory and download binary
+        installCmd = `powershell -Command "New-Item -ItemType Directory -Force -Path '${destDir}' | Out-Null; Invoke-WebRequest -Uri 'https://github.com/apiiro/cli-releases/releases/latest/download/${binaryName}' -OutFile '${dest}'"`;
+      } else if (platform === 'darwin') {
+        // macOS — use Homebrew if available, otherwise direct download
+        installCmd = 'brew tap apiiro/tap && brew install apiiro';
+      } else {
+        // Linux
+        binaryName = arch === 'arm64' ? 'apiiro-linux-arm64' : 'apiiro-linux-x64';
+        installCmd = `curl -fSL -o /usr/local/bin/apiiro "https://github.com/apiiro/cli-releases/releases/latest/download/${binaryName}" && chmod +x /usr/local/bin/apiiro`;
+      }
+
+      const child = spawn(installCmd, {
+        shell: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', (d) => { stdout += d.toString(); });
+      child.stderr.on('data', (d) => { stderr += d.toString(); });
+
+      _bgProcesses['apiiro-install'] = { status: 'running', stdout: '', stderr: '' };
+
+      child.on('close', (code) => {
+        _bgProcesses['apiiro-install'] = {
+          status: code === 0 ? 'success' : 'failed',
+          stdout,
+          stderr,
+          exitCode: code,
+        };
+      });
+
+      res.json({ status: 'started', message: 'Installing Apiiro CLI from GitHub releases...' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Poll install/login status
+  app.get('/api/scanners/apiiro/process/:action', (req, res) => {
+    const key = `apiiro-${req.params.action}`;
+    const process = _bgProcesses[key];
+    if (!process) {
+      return res.json({ status: 'idle' });
+    }
+    res.json(process);
+  });
+
+  // ─── Apiiro Login ─────────────────────────────────────
+
+  app.post('/api/scanners/apiiro/login', (req, res) => {
+    try {
+      const plugins = loadPlugins();
+      const plugin = plugins.get('apiiro');
+      const creds = loadCredentials();
+      const cliPath = (creds.apiiro && creds.apiiro.cli_path) || 'apiiro';
+
+      const child = spawn(cliPath, ['login'], {
+        shell: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', (d) => { stdout += d.toString(); });
+      child.stderr.on('data', (d) => { stderr += d.toString(); });
+
+      _bgProcesses['apiiro-login'] = { status: 'running', stdout: '', stderr: '' };
+
+      child.on('close', (code) => {
+        _bgProcesses['apiiro-login'] = {
+          status: code === 0 ? 'success' : 'failed',
+          stdout,
+          stderr,
+          exitCode: code,
+        };
+      });
+
+      res.json({ status: 'started', message: 'Opening Apiiro login... Complete authentication in the browser window.' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ─── Scan Trigger ─────────────────────────────────────
+
+  app.post('/api/scanners/:source/fetch', async (req, res) => {
+    try {
+      const { fetchCommand } = require('../commands/fetch');
+      const source = req.params.source;
+      const opts = { json: true, ...(req.body || {}) };
+
+      // Capture console output
+      const logs = [];
+      const origLog = console.log;
+      const origError = console.error;
+      console.log = (...args) => logs.push({ level: 'info', message: args.join(' ') });
+      console.error = (...args) => logs.push({ level: 'error', message: args.join(' ') });
+
+      try {
+        await fetchCommand(source, opts);
+        console.log = origLog;
+        console.error = origError;
+        res.json({ success: true, logs });
+      } catch (err) {
+        console.log = origLog;
+        console.error = origError;
+        res.status(500).json({ error: err.message, logs });
+      }
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -383,7 +539,7 @@ function createApp() {
  * Start the dashboard server.
  */
 function startServer(options = {}) {
-  const port = options.port || process.env.DASHBOARD_PORT || 8000;
+  const port = options.port || 8000;
   const app = createApp();
 
   // Initialize DB schema and run migrations

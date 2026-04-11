@@ -325,17 +325,17 @@ async function captureSnapshot(context, page, extensionId, timeout = ANALYZER_IN
 async function evaluateSnapshot(snapshot, config) {
   const JSZip = require('jszip');
 
-  const apiKey = config.apiKey || process.env.AQA_USER_API_KEY || process.env.AQA_API_KEY;
-  const teamSlug = config.teamSlug || process.env.AQA_TEAM_SLUG;
+  const apiKey = config.apiKey || config.user_api_key || config.api_key;
+  const teamSlug = config.teamSlug || config.team_slug;
   const apiHost = config.apiHost || AQA_API_HOST;
   const lang = config.lang || 'en';
-  const ruleset = config.ruleset || process.env.AQA_RULESET_ID || 'wcag22';
+  const ruleset = config.ruleset || 'wcag22';
   const pageUrl = config.pageUrl || 'unknown';
 
   if (!apiKey) {
     throw new Error(
       'AQA API key is required for aqa engine.\n' +
-      'Pass --api-key or set AQA_API_KEY in your .env file.'
+      'Pass --api-key or configure it in Settings.'
     );
   }
   if (!teamSlug) {

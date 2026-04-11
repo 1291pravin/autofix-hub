@@ -3,7 +3,7 @@
 const chalk = require('chalk');
 const { getDb } = require('../db');
 const { initSchema } = require('../setup');
-const { loadCredentials, loadScoringConfig, loadProjectEnv } = require('../config');
+const { loadCredentials, loadScoringConfig } = require('../config');
 const { getPlugin } = require('../pluginLoader');
 const { dedupIssues } = require('../dedup');
 const { scoreIssue } = require('../scoring');
@@ -23,10 +23,9 @@ async function fetchCommand(source, opts = {}) {
   const credentials = loadCredentials();
   const scoringConfig = loadScoringConfig();
 
-  // Merge: CLI flags > .env credentials > defaults
+  // Merge: CLI flags > saved credentials > defaults
   const config = {
     ...credentials[source],
-    env: process.env,
   };
 
   // Apply CLI overrides
@@ -50,7 +49,11 @@ async function fetchCommand(source, opts = {}) {
   try {
     rawIssues = await plugin.fetch(config);
   } catch (err) {
-    console.error(chalk.red(`Fetch failed: ${err.message}`));
+    const msg = `Fetch failed: ${err.message}`;
+    console.error(chalk.red(msg));
+    if (opts.json) {
+      throw new Error(msg);
+    }
     process.exit(1);
   }
 

@@ -37,10 +37,6 @@ async function scanCommand(source, url, opts = {}) {
   if (opts.suiteId) config.aqaSuiteId = opts.suiteId;
   if (opts.ruleset) config.ruleset = opts.ruleset;
 
-  // Fallback to .env for aqa engine credentials
-  if (!config.apiKey && process.env.AQA_API_KEY) config.apiKey = process.env.AQA_API_KEY;
-  if (!config.teamSlug && process.env.AQA_TEAM_SLUG) config.teamSlug = process.env.AQA_TEAM_SLUG;
-
   console.log(chalk.cyan(`\nScanning with ${plugin.displayName || source}...`));
   console.log(chalk.gray(`  Engine: ${config.scanEngine}`));
   console.log(chalk.gray(`  URLs:   ${urls}`));

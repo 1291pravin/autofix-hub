@@ -183,9 +183,9 @@ module.exports = {
       throw new Error('SonarQube credentials not configured. Run autofix-hub setup.');
     }
 
-    const projectKey = config.project_key || process.env.SONARQUBE_PROJECT_KEY;
+    const projectKey = config.project_key;
     if (!projectKey) {
-      throw new Error('SONARQUBE_PROJECT_KEY not configured. Set it in .env or run setup.');
+      throw new Error('SonarQube project key not configured. Configure it in Settings.');
     }
 
     return await fetchAllIssues(config.server_url, config.token, projectKey);

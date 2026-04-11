@@ -2,11 +2,7 @@
 'use strict';
 
 const { program } = require('commander');
-const { loadProjectEnv } = require('../src/config');
 const { loadPlugins, listPlugins, KNOWN_PLUGINS } = require('../src/pluginLoader');
-
-// Load project .env early
-loadProjectEnv();
 
 program
   .name('autofix-hub')

@@ -233,6 +233,18 @@ module.exports = {
       message: 'AQA API key (X-Team header value):',
       validate: (v) => v.trim() ? true : 'API key is required',
     },
+    {
+      type: 'input',
+      name: 'test_id',
+      message: 'Default test ID for API fetch:',
+      default: '',
+    },
+    {
+      type: 'password',
+      name: 'user_api_key',
+      message: 'Personal API key for AQA extension engine:',
+      default: '',
+    },
   ],
 
   fetch: async (config) => {
@@ -257,10 +269,10 @@ module.exports = {
     }
 
     const baseUrl = `https://api-aqa.usablenet.com/v3.1/${config.team_slug}`;
-    const testId = config.test_id || process.env.AQA_TEST_ID;
+    const testId = config.test_id;
 
     if (!testId) {
-      throw new Error('AQA_TEST_ID not configured. Set it in .env or run setup.');
+      throw new Error('AQA Test ID not configured. Configure it in Settings.');
     }
 
     // Get test details and its runs history

@@ -25,7 +25,7 @@ Each scanner has a fix guide in the `resources/` directory with scanner-specific
 ```
 
 Where `<scanner>` is one of: `apiiro`, `aqa`, `sonarqube`
-And `<action>` is one of: `fetch`, `fix-next`, `approve`, `reject`, `report`
+And `<action>` is one of: `fetch`, `fix-next`, `fix <id>`, `fix-cluster <clusterId>`, `approve`, `reject`, `report`
 And `<shared-action>` is one of: `setup`, `dashboard`, `report`
 
 ---
@@ -72,6 +72,69 @@ Pick the highest-priority unfixed issue (or cluster), create a fix branch, and a
    autofix-hub status <issueId> ai_fixed
    ```
 7. Tell the user what was fixed, which files were changed, and the review level. Remind them of the review expectations per the fix guide.
+
+### `/autofix <scanner> fix <id>`
+
+Fix a specific issue by its ID. Use this when you know exactly which issue to fix (e.g., from the dashboard's "Copy Fix Command" button).
+
+1. **Read** the scanner's fix guide from `resources/` (see paths above).
+2. Run:
+   ```bash
+   autofix-hub <scanner> fix <id>
+   ```
+3. The CLI outputs the same JSON format as `fix-next`:
+   ```json
+   {
+     "issueId": "<scanner>-<id>",
+     "branch": "autofix/<scanner>-<id>",
+     "files": ["src/example.js"],
+     "fixPrompt": "...",
+     "clusterInfo": null,
+     "reviewLevel": "careful",
+     "estimatedEffort": "small"
+   }
+   ```
+4. Parse the JSON, open each file in `files`, apply the fix following `fixPrompt` and the fix guide.
+5. After applying the fix, mark as AI-fixed:
+   ```bash
+   autofix-hub status <issueId> ai_fixed
+   ```
+6. Tell the user what was fixed, which files were changed, and the review level.
+
+### `/autofix <scanner> fix-cluster <clusterId>`
+
+Fix all open issues in a specific cluster. The CLI creates a single branch for all issues. Use this when you want to batch-fix related issues together (e.g., from the dashboard's cluster "Copy Fix Command" button).
+
+1. **Read** the scanner's fix guide from `resources/` (see paths above).
+2. Run:
+   ```bash
+   autofix-hub <scanner> fix-cluster <clusterId>
+   ```
+3. The CLI outputs JSON with a `clusterInfo` field:
+   ```json
+   {
+     "issueId": "<first-issue-id>",
+     "branch": "autofix/cluster-<clusterId>",
+     "files": ["src/file1.js", "src/file2.js"],
+     "fixPrompt": "...",
+     "clusterInfo": {
+       "clusterId": "<clusterId>",
+       "clusterKey": "...",
+       "issueCount": 3,
+       "issueIds": ["id1", "id2", "id3"]
+     },
+     "reviewLevel": "careful",
+     "estimatedEffort": "medium"
+   }
+   ```
+4. Parse the JSON. Open **all** files in `files`. Apply the fix following `fixPrompt` — it will be a batch prompt covering all issues in the cluster.
+5. After applying all fixes, mark **each** issue as AI-fixed:
+   ```bash
+   autofix-hub status <issueId1> ai_fixed
+   autofix-hub status <issueId2> ai_fixed
+   autofix-hub status <issueId3> ai_fixed
+   ```
+6. Tell the user what was fixed across the cluster, which files were changed, and the review level.
 
 ### `/autofix <scanner> approve <id>`
 

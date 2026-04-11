@@ -261,15 +261,15 @@ function extractDepName(scannerData) {
 }
 
 /**
- * Get repo name from environment variable or git remote.
+ * Get repo name from config or git remote.
  */
-function getRepoName() {
-  // First try environment variable
-  const envRepoName = process.env.APIIRO_REPO_NAME;
-  if (envRepoName && envRepoName.trim()) {
-    return envRepoName.trim();
+function getRepoName(config) {
+  // First try config
+  const repoName = config && config.repo_name;
+  if (repoName && repoName.trim()) {
+    return repoName.trim();
   }
-  
+
   // Fallback to git remote
   try {
     const url = execSync('git remote get-url origin', { encoding: 'utf8' }).trim();
@@ -278,7 +278,7 @@ function getRepoName() {
     const match = url.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
     return match ? match[1] : url;
   } catch (_) {
-    throw new Error('Could not determine repo name. Set APIIRO_REPO_NAME environment variable or ensure you are in a git repository.');
+    throw new Error('Could not determine repo name. Configure it in Settings or ensure you are in a git repository.');
   }
 }
 
@@ -286,32 +286,38 @@ module.exports = {
   name: 'apiiro',
   displayName: 'Apiiro Security',
 
-  checkInstalled: async () => {
+  checkInstalled: async (creds) => {
     try {
-      const version = execSync('apiiro --version', { encoding: 'utf8', timeout: 10000, env: TLS_ENV }).trim();
+      const cliPath = (creds && creds.cli_path) || 'apiiro';
+      const version = execSync(`"${cliPath}" --version`, { encoding: 'utf8', timeout: 10000, env: TLS_ENV }).trim();
       return { installed: true, message: version };
     } catch (_) {
-      return { installed: false, message: 'Apiiro CLI not found. Install from: https://docs.apiiro.com/cli/install' };
+      return { installed: false, message: 'Apiiro CLI not found. Install from: https://github.com/apiiro/cli-releases' };
     }
   },
 
   checkAuth: async (creds) => {
     try {
       const cliPath = (creds && creds.cli_path) || 'apiiro';
-      execSync(`${cliPath} risks --repo test --output json --limit 0`, {
+      const output = execSync(`"${cliPath}" auth status`, {
         encoding: 'utf8',
         timeout: 15000,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: TLS_ENV,
-      });
-      return { authenticated: true, message: 'Authenticated' };
-    } catch (err) {
-      const msg = (err.stderr || err.message || '').toLowerCase();
-      if (msg.includes('auth') || msg.includes('login') || msg.includes('token') || msg.includes('unauthorized')) {
+      }).toLowerCase();
+      if (output.includes('not authenticated')) {
         return { authenticated: false, message: 'Not authenticated. Run: apiiro login' };
       }
-      // Could be a repo-not-found error which still means auth is fine
-      return { authenticated: true, message: 'Authenticated (test repo not found, but CLI responds)' };
+      return { authenticated: true, message: 'Authenticated' };
+    } catch (err) {
+      const msg = (err.stdout || err.stderr || err.message || '').toLowerCase();
+      if (msg.includes('not authenticated')) {
+        return { authenticated: false, message: 'Not authenticated. Run: apiiro login' };
+      }
+      if (msg.includes('not found') || msg.includes('not recognized') || msg.includes('enoent')) {
+        return { authenticated: false, message: 'Apiiro CLI not installed — cannot check auth' };
+      }
+      return { authenticated: false, message: `Auth check failed: ${err.message || 'unknown error'}` };
     }
   },
 
@@ -322,10 +328,16 @@ module.exports = {
       message: 'Apiiro CLI path (leave blank for default):',
       default: 'apiiro',
     },
+    {
+      type: 'input',
+      name: 'repo_name',
+      message: 'Repository name in Apiiro (leave blank to auto-detect from git):',
+      default: '',
+    },
   ],
 
   fetch: async (config) => {
-    const repoName = getRepoName();
+    const repoName = getRepoName(config);
     const cliPath = (config && config.cli_path) || 'apiiro';
     const fs = require('fs');
     const os = require('os');
@@ -339,7 +351,7 @@ module.exports = {
       
       try {
         console.log('Saving output to temporary file to bypass CLI limits...');
-        execSync(`${cliPath} risks --repo ${repoName} --output json --file ${tempFile}`, {
+        execSync(`"${cliPath}" risks --repo ${repoName} --output json --file "${tempFile}"`, {
           encoding: 'utf8',
           timeout: 120000,
           maxBuffer: 100 * 1024 * 1024,
@@ -369,7 +381,7 @@ module.exports = {
         console.log('File approach failed, trying direct CLI output...');
         
         // Fallback to direct output with smaller page size
-        const output = execSync(`${cliPath} risks --repo ${repoName} --output json --page-size 100`, {
+        const output = execSync(`"${cliPath}" risks --repo ${repoName} --output json --page-size 100`, {
           encoding: 'utf8',
           timeout: 120000,
           maxBuffer: 100 * 1024 * 1024,

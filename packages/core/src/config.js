@@ -42,17 +42,6 @@ function saveCredentials(data) {
 }
 
 /**
- * Load project .env via dotenv from project root.
- */
-function loadProjectEnv() {
-  const projectRoot = getProjectRoot();
-  const envPath = path.join(projectRoot, '.env');
-  if (fs.existsSync(envPath)) {
-    require('dotenv').config({ path: envPath });
-  }
-}
-
-/**
  * Load scoring config from config/scoring.json in project root.
  */
 function loadScoringConfig() {
@@ -78,7 +67,6 @@ module.exports = {
   getProjectRoot,
   loadCredentials,
   saveCredentials,
-  loadProjectEnv,
   loadScoringConfig,
   loadEffortMap,
   GLOBAL_CONFIG_DIR,

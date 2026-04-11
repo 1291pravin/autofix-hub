@@ -5,7 +5,7 @@ const chalk = require('chalk');
 async function dashboardCommand() {
   const { startServer } = require('../dashboard/server');
 
-  const port = process.env.DASHBOARD_PORT || 8000;
+  const port = 8000;
   console.log(chalk.cyan('\nStarting autofix-hub dashboard...'));
 
   const server = await startServer({ port });
