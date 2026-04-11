@@ -70,14 +70,16 @@ function clusterIssues(issues, plugin, db) {
     }
 
     // Recalculate issue_count from the join table for accuracy
-    for (const [cid, data] of clusters) {
-      if (data.issueIds.length < 2) continue;
-      const row = db.prepare(
-        'SELECT COUNT(*) as cnt FROM issue_clusters WHERE cluster_id = ?'
-      ).get(cid);
-      if (row) {
-        db.prepare('UPDATE clusters SET issue_count = ? WHERE id = ?').run(row.cnt, cid);
-      }
+    const clusterIds = Array.from(clusters.entries())
+      .filter(([, d]) => d.issueIds.length >= 2)
+      .map(([cid]) => cid);
+    if (clusterIds.length > 0) {
+      const ph = clusterIds.map(() => '?').join(',');
+      db.prepare(`
+        UPDATE clusters SET issue_count = (
+          SELECT COUNT(*) FROM issue_clusters WHERE issue_clusters.cluster_id = clusters.id
+        ) WHERE id IN (${ph})
+      `).run(...clusterIds);
     }
   });
 

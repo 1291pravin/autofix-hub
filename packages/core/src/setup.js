@@ -90,6 +90,7 @@ function initSchema() {
       pattern_tag TEXT,
       description TEXT,
       occurrences INTEGER DEFAULT 0,
+      first_seen_at TEXT,
       last_seen_at TEXT,
       negative_prompt_clause TEXT
     );
@@ -164,6 +165,11 @@ function migrateIssueClusters() {
       issue.metadata = metaMap.get(issue.id) || {};
     }
 
+    // Pre-load all cluster IDs to avoid per-issue queries
+    const existingClusterIds = new Set(
+      db.prepare('SELECT id FROM clusters').all().map(r => r.id)
+    );
+
     const recluster = db.transaction(() => {
       for (const issue of allIssues) {
         const plugin = plugins.get(issue.source);
@@ -174,9 +180,7 @@ function migrateIssueClusters() {
 
         for (const key of keys) {
           const cid = clusterHash(issue.source, key);
-          // Only insert into join table for clusters that exist
-          const exists = db.prepare('SELECT 1 FROM clusters WHERE id = ?').get(cid);
-          if (exists) {
+          if (existingClusterIds.has(cid)) {
             insertJoin.run(issue.id, cid);
           }
         }

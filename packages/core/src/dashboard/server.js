@@ -192,7 +192,7 @@ function createApp() {
     const where = [];
     const params = [];
 
-    if (source) { where.push('source = ?'); params.push(source); }
+    if (source) { where.push('c.source = ?'); params.push(source); }
 
     const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
@@ -200,7 +200,7 @@ function createApp() {
       SELECT c.*, COALESCE(jc.cnt, c.issue_count) as issue_count
       FROM clusters c
       LEFT JOIN (SELECT cluster_id, COUNT(*) as cnt FROM issue_clusters GROUP BY cluster_id) jc ON jc.cluster_id = c.id
-      ${whereClause ? whereClause.replace('source', 'c.source') : ''}
+      ${whereClause}
       ORDER BY issue_count DESC
     `).all(...params);
 
