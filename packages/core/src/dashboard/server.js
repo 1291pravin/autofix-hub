@@ -3,7 +3,7 @@
 const path = require('path');
 const express = require('express');
 const { getDb } = require('../db');
-const { initSchema } = require('../setup');
+const { initSchema, migrateIssueClusters } = require('../setup');
 const { loadPlugins, listPlugins } = require('../pluginLoader');
 const {
   getMTTF,
@@ -39,7 +39,7 @@ function createApp() {
     if (source) { where.push('source = ?'); params.push(source); }
     if (status) { where.push('status = ?'); params.push(status); }
     if (severity) { where.push('severity = ?'); params.push(severity); }
-    if (cluster) { where.push('cluster_id = ?'); params.push(cluster); }
+    if (cluster) { where.push('id IN (SELECT issue_id FROM issue_clusters WHERE cluster_id = ?)'); params.push(cluster); }
 
     const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
@@ -197,7 +197,10 @@ function createApp() {
     const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
     const clusters = db.prepare(`
-      SELECT * FROM clusters ${whereClause}
+      SELECT c.*, COALESCE(jc.cnt, c.issue_count) as issue_count
+      FROM clusters c
+      LEFT JOIN (SELECT cluster_id, COUNT(*) as cnt FROM issue_clusters GROUP BY cluster_id) jc ON jc.cluster_id = c.id
+      ${whereClause ? whereClause.replace('source', 'c.source') : ''}
       ORDER BY issue_count DESC
     `).all(...params);
 
@@ -218,9 +221,10 @@ function createApp() {
       }
 
       const clusterIssues = db.prepare(`
-        SELECT * FROM issues
-        WHERE cluster_id = ? AND status = 'open' AND is_duplicate = 0
-        ORDER BY impact_score DESC
+        SELECT i.* FROM issues i
+        INNER JOIN issue_clusters ic ON ic.issue_id = i.id
+        WHERE ic.cluster_id = ? AND i.status = 'open' AND i.is_duplicate = 0
+        ORDER BY i.impact_score DESC
       `).all(clusterId);
 
       if (clusterIssues.length === 0) {
@@ -382,8 +386,9 @@ function startServer(options = {}) {
   const port = options.port || process.env.DASHBOARD_PORT || 8000;
   const app = createApp();
 
-  // Initialize DB schema
+  // Initialize DB schema and run migrations
   initSchema();
+  migrateIssueClusters();
 
   return new Promise((resolve) => {
     const server = app.listen(port, () => {

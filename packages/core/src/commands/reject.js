@@ -85,8 +85,11 @@ async function rejectCommand(source, id, tag, reason) {
   // Delete fix branch
   try {
     if (issue.fix_branch) {
-      if (issue.cluster_id) {
-        git.rollbackCluster(issue.cluster_id);
+      const rejectClusterRow = issue.cluster_id
+        ? { cluster_id: issue.cluster_id }
+        : db.prepare('SELECT cluster_id FROM issue_clusters WHERE issue_id = ? LIMIT 1').get(id);
+      if (rejectClusterRow && rejectClusterRow.cluster_id) {
+        git.rollbackCluster(rejectClusterRow.cluster_id);
       } else {
         git.rollbackFix(id);
       }
@@ -97,8 +100,11 @@ async function rejectCommand(source, id, tag, reason) {
 
   // Release file locks
   releaseLocksForIssue(id);
-  if (issue.cluster_id) {
-    releaseLocksForIssue(`cluster-${issue.cluster_id}`);
+  const rejectLockCluster = issue.cluster_id
+    ? { cluster_id: issue.cluster_id }
+    : db.prepare('SELECT cluster_id FROM issue_clusters WHERE issue_id = ? LIMIT 1').get(id);
+  if (rejectLockCluster && rejectLockCluster.cluster_id) {
+    releaseLocksForIssue(`cluster-${rejectLockCluster.cluster_id}`);
   }
 
   console.log(chalk.green(`${id} rejected [${tag}]: ${reason}`));

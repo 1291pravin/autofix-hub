@@ -50,6 +50,10 @@ function clusterIssues(issues, plugin, db) {
     UPDATE issues SET cluster_id = ? WHERE id = ?
   `);
 
+  const insertJoin = db.prepare(`
+    INSERT OR IGNORE INTO issue_clusters (issue_id, cluster_id) VALUES (?, ?)
+  `);
+
   const now = new Date().toISOString();
 
   const applyAll = db.transaction(() => {
@@ -61,6 +65,18 @@ function clusterIssues(issues, plugin, db) {
 
       for (const issueId of data.issueIds) {
         updateIssueCluster.run(cid, issueId);
+        insertJoin.run(issueId, cid);
+      }
+    }
+
+    // Recalculate issue_count from the join table for accuracy
+    for (const [cid, data] of clusters) {
+      if (data.issueIds.length < 2) continue;
+      const row = db.prepare(
+        'SELECT COUNT(*) as cnt FROM issue_clusters WHERE cluster_id = ?'
+      ).get(cid);
+      if (row) {
+        db.prepare('UPDATE clusters SET issue_count = ? WHERE id = ?').run(row.cnt, cid);
       }
     }
   });

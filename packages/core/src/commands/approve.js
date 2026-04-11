@@ -125,11 +125,18 @@ function generatePRBody(issue, db) {
     '',
   ];
 
-  // Cluster info
-  if (issue.cluster_id) {
+  // Cluster info - use join table for accurate cluster membership
+  const approveClusterRow = issue.cluster_id
+    ? { cluster_id: issue.cluster_id }
+    : db.prepare('SELECT cluster_id FROM issue_clusters WHERE issue_id = ? LIMIT 1').get(issue.id);
+  const approveClusterId = approveClusterRow ? approveClusterRow.cluster_id : null;
+
+  if (approveClusterId) {
     const clusterIssues = db.prepare(
-      `SELECT id, file_path, description FROM issues WHERE cluster_id = ? AND id != ?`
-    ).all(issue.cluster_id, issue.id);
+      `SELECT i.id, i.file_path, i.description FROM issues i
+       INNER JOIN issue_clusters ic ON ic.issue_id = i.id
+       WHERE ic.cluster_id = ? AND i.id != ?`
+    ).all(approveClusterId, issue.id);
 
     if (clusterIssues.length > 0) {
       lines.push('### Related Issues (Cluster)');

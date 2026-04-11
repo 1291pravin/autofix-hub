@@ -1415,13 +1415,8 @@ module.exports = {
       }
     }
 
-    // Build inventory table with enhanced context and element identification
-    const inventoryLines = [
-      `| # | AQA ID | Selector | Element | Occurrence | Page/Step | Solution Key |`,
-      `|---|--------|----------|---------|------------|-----------|--------------|`,
-    ];
-    
-    issues.forEach((issue, i) => {
+    // Build detailed per-issue inventory with rich context matching individual prompts
+    const issueDetailBlocks = issues.map((issue, i) => {
       const m = issue.metadata || {};
       const selector = m.selector || issue.rule_id;
       const element = m.tag_name ? `<${m.tag_name}>` : '';
@@ -1429,10 +1424,61 @@ module.exports = {
       const occurrence = (m.selector_total && m.selector_total > 1)
         ? `${m.selector_occurrence}/${m.selector_total}`
         : '—';
+      const stepName = m.step_name || m.context_name || '';
+      const pageUrl = m.page_url || '';
+      const solKey = m.solution_id || '—';
+      const htmlSnippet = m.html_snippet || '';
+      const aqaReport = m.aqa_report_url || '';
+      const technology = m.technology || '';
+      const responsibility = m.responsibility || '';
+
+      const lines = [
+        `#### Issue ${i + 1}: \`${aqaId}\``,
+        `| Field | Value |`,
+        `|-------|-------|`,
+        `| **Selector** | \`${selector}\` |`,
+        element ? `| **Element** | \`${element}\` |` : '',
+        `| **Occurrence** | ${occurrence} |`,
+        stepName ? `| **Flow/Step** | ${stepName} |` : '',
+        pageUrl ? `| **Page URL** | ${pageUrl} |` : '',
+        technology ? `| **Technology** | ${technology} |` : '',
+        responsibility ? `| **Responsibility** | ${responsibility} |` : '',
+        `| **Solution Key** | \`${solKey}\` |`,
+        aqaReport ? `| **AQA Report** | [View in AQA](${aqaReport}) |` : '',
+      ];
+
+      if (m.problem && m.problem !== issue.description) {
+        lines.push(``, `> **Problem:** ${m.problem}`);
+      }
+
+      if (htmlSnippet) {
+        lines.push(``, '```html', htmlSnippet, '```');
+      }
+
+      if (m.comments && m.comments.length > 0) {
+        const commentList = (Array.isArray(m.comments) ? m.comments : [m.comments])
+          .map(c => `> ${c}`).join('\n');
+        lines.push(``, commentList);
+      }
+
+      return lines.filter(Boolean).join('\n');
+    });
+
+    // Also build a compact summary table for quick reference
+    const inventoryLines = [
+      `| # | AQA ID | Selector | Element | Page/Step | Solution Key |`,
+      `|---|--------|----------|---------|-----------|--------------|`,
+    ];
+
+    issues.forEach((issue, i) => {
+      const m = issue.metadata || {};
+      const selector = m.selector || issue.rule_id;
+      const element = m.tag_name ? `<${m.tag_name}>` : '';
+      const aqaId = m.issue_aqa_id || '—';
       const stepName = m.step_name || m.context_name || m.page_url || '';
       const solKey = m.solution_id || '—';
-      
-      inventoryLines.push(`| ${i + 1} | \`${aqaId}\` | \`${selector}\` | \`${element}\` | ${occurrence} | ${stepName} | \`${solKey}\` |`);
+
+      inventoryLines.push(`| ${i + 1} | \`${aqaId}\` | \`${selector}\` | \`${element}\` | ${stepName} | \`${solKey}\` |`);
     });
 
     // WCAG guidance for the batch
@@ -1485,8 +1531,11 @@ module.exports = {
       solLines.length > 0 ? `\n### AQA Recommended Fix\n> Apply this guidance consistently to all ${issues.length} instances.\n\n${solLines.join('\n')}` : '',
       categoryNote,
       ``,
-      `### Affected Elements`,
+      `### Summary`,
       ...inventoryLines,
+      ``,
+      `### Detailed Issue Context`,
+      ...issueDetailBlocks.map(block => `\n${block}`),
       ``,
       `### Instructions`,
       `1. Apply the **same fix pattern** consistently to every element listed above`,

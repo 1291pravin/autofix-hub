@@ -77,6 +77,12 @@ function initSchema() {
       created_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS issue_clusters (
+      issue_id TEXT NOT NULL,
+      cluster_id TEXT NOT NULL,
+      PRIMARY KEY (issue_id, cluster_id)
+    );
+
     CREATE TABLE IF NOT EXISTS rejection_patterns (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       source TEXT,
@@ -115,7 +121,94 @@ function initSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_rejection_patterns_unique
       ON rejection_patterns (source, rule_id, pattern_tag);
     CREATE INDEX IF NOT EXISTS idx_locks_expires_at ON locks (expires_at);
+    CREATE INDEX IF NOT EXISTS idx_issue_clusters_cluster_id ON issue_clusters (cluster_id);
+    CREATE INDEX IF NOT EXISTS idx_issue_clusters_issue_id ON issue_clusters (issue_id);
   `);
 }
 
-module.exports = { initSchema };
+/**
+ * Backfill the issue_clusters join table from existing cluster_id assignments
+ * and re-cluster all issues to establish proper many-to-many relationships.
+ * Safe to call multiple times (idempotent).
+ */
+function migrateIssueClusters() {
+  const db = getDb();
+
+  // Check if migration is needed: if issue_clusters is empty but clusters exist
+  const clusterCount = db.prepare('SELECT COUNT(*) as cnt FROM clusters').get().cnt;
+  const joinCount = db.prepare('SELECT COUNT(*) as cnt FROM issue_clusters').get().cnt;
+
+  if (clusterCount === 0 || joinCount > 0) return; // Nothing to migrate or already done
+
+  // Re-cluster all issues using plugin clusterKeys to get proper many-to-many
+  try {
+    const { loadPlugins } = require('./pluginLoader');
+    const { clusterHash } = require('./clustering');
+    const plugins = loadPlugins();
+
+    const insertJoin = db.prepare(
+      'INSERT OR IGNORE INTO issue_clusters (issue_id, cluster_id) VALUES (?, ?)'
+    );
+
+    const allIssues = db.prepare('SELECT * FROM issues WHERE is_duplicate = 0').all();
+
+    // Hydrate metadata for all issues
+    const allMeta = db.prepare('SELECT issue_id, key, value FROM issue_metadata').all();
+    const metaMap = new Map();
+    for (const row of allMeta) {
+      if (!metaMap.has(row.issue_id)) metaMap.set(row.issue_id, {});
+      const obj = metaMap.get(row.issue_id);
+      try { obj[row.key] = JSON.parse(row.value); } catch (_) { obj[row.key] = row.value; }
+    }
+    for (const issue of allIssues) {
+      issue.metadata = metaMap.get(issue.id) || {};
+    }
+
+    const recluster = db.transaction(() => {
+      for (const issue of allIssues) {
+        const plugin = plugins.get(issue.source);
+        if (!plugin || typeof plugin.clusterKeys !== 'function') continue;
+
+        const keys = plugin.clusterKeys(issue);
+        if (!keys || keys.length === 0) continue;
+
+        for (const key of keys) {
+          const cid = clusterHash(issue.source, key);
+          // Only insert into join table for clusters that exist
+          const exists = db.prepare('SELECT 1 FROM clusters WHERE id = ?').get(cid);
+          if (exists) {
+            insertJoin.run(issue.id, cid);
+          }
+        }
+      }
+
+      // Update issue_count from join table for ALL clusters
+      db.exec(`
+        UPDATE clusters SET issue_count = (
+          SELECT COUNT(*) FROM issue_clusters WHERE issue_clusters.cluster_id = clusters.id
+        )
+      `);
+
+      // Delete stale clusters that have 0 actual issues in the join table
+      db.exec('DELETE FROM clusters WHERE issue_count = 0');
+    });
+
+    recluster();
+  } catch (err) {
+    // If re-clustering fails (e.g., plugins not available), fall back to basic backfill
+    console.warn(`Warning: Re-clustering migration partial: ${err.message}`);
+    // Basic fallback: backfill from cluster_id column
+    db.exec(`
+      INSERT OR IGNORE INTO issue_clusters (issue_id, cluster_id)
+      SELECT id, cluster_id FROM issues WHERE cluster_id IS NOT NULL
+    `);
+    db.exec(`
+      UPDATE clusters SET issue_count = (
+        SELECT COUNT(*) FROM issue_clusters WHERE issue_clusters.cluster_id = clusters.id
+      )
+    `);
+    db.exec('DELETE FROM clusters WHERE issue_count = 0');
+  }
+}
+
+module.exports = { initSchema, migrateIssueClusters };

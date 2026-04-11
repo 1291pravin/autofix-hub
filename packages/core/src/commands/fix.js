@@ -27,9 +27,10 @@ async function fixNextCommand(source) {
 
   if (cluster) {
     const clusterIssues = db.prepare(`
-      SELECT * FROM issues
-      WHERE cluster_id = ? AND status = 'open' AND is_duplicate = 0
-      ORDER BY impact_score DESC
+      SELECT i.* FROM issues i
+      INNER JOIN issue_clusters ic ON ic.issue_id = i.id
+      WHERE ic.cluster_id = ? AND i.status = 'open' AND i.is_duplicate = 0
+      ORDER BY i.impact_score DESC
     `).all(cluster.id);
 
     if (clusterIssues.length > 0) {

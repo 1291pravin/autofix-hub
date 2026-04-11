@@ -38,17 +38,24 @@ async function rollbackCommand(source, id) {
 
   // Rollback git changes
   try {
-    if (issue.cluster_id) {
-      git.rollbackCluster(issue.cluster_id);
+    // Look up cluster membership via join table (more reliable than single cluster_id column)
+    const clusterRow = issue.cluster_id
+      ? { cluster_id: issue.cluster_id }
+      : db.prepare('SELECT cluster_id FROM issue_clusters WHERE issue_id = ? LIMIT 1').get(id);
+    const effectiveClusterId = clusterRow ? clusterRow.cluster_id : null;
+
+    if (effectiveClusterId) {
+      git.rollbackCluster(effectiveClusterId);
       // Reset cluster status
       db.prepare('UPDATE clusters SET status = ?, fix_branch = NULL WHERE id = ?')
-        .run('open', issue.cluster_id);
-      // Reset all issues in cluster
+        .run('open', effectiveClusterId);
+      // Reset all issues in cluster via join table
       db.prepare(`
         UPDATE issues
         SET status = 'open', fix_branch = NULL, updated_at = ?
-        WHERE cluster_id = ? AND status IN ('in_progress', 'ai_fixed')
-      `).run(now, issue.cluster_id);
+        WHERE id IN (SELECT issue_id FROM issue_clusters WHERE cluster_id = ?)
+          AND status IN ('in_progress', 'ai_fixed')
+      `).run(now, effectiveClusterId);
     } else {
       git.rollbackFix(id, affectedFiles);
     }
@@ -65,8 +72,12 @@ async function rollbackCommand(source, id) {
 
   // Release file locks
   releaseLocksForIssue(id);
-  if (issue.cluster_id) {
-    releaseLocksForIssue(`cluster-${issue.cluster_id}`);
+  // Look up cluster membership for lock release
+  const lockClusterRow = issue.cluster_id
+    ? { cluster_id: issue.cluster_id }
+    : db.prepare('SELECT cluster_id FROM issue_clusters WHERE issue_id = ? LIMIT 1').get(id);
+  if (lockClusterRow && lockClusterRow.cluster_id) {
+    releaseLocksForIssue(`cluster-${lockClusterRow.cluster_id}`);
   }
 
   console.log(chalk.green(`${id} rolled back to open.`));
