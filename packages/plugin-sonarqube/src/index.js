@@ -170,11 +170,14 @@ module.exports = {
       message: 'SonarQube authentication token:',
       validate: (v) => v.trim() ? true : 'Token is required',
     },
+  ],
+
+  projectConfigPrompts: () => [
     {
       type: 'input',
       name: 'project_key',
-      message: 'SonarQube project key (or set SONARQUBE_PROJECT_KEY in .env):',
-      default: '',
+      message: 'SonarQube project key for this project:',
+      validate: (v) => v.trim() ? true : 'Project key is required',
     },
   ],
 

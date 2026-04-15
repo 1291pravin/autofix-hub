@@ -23,6 +23,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter @autofix-hub/core run dev",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "pack": "node scripts/pack.js",
+    "pack:install": "node scripts/pack.js --install"
   }
 }

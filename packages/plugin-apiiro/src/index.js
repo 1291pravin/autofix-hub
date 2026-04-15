@@ -328,6 +328,9 @@ module.exports = {
       message: 'Apiiro CLI path (leave blank for default):',
       default: 'apiiro',
     },
+  ],
+
+  projectConfigPrompts: () => [
     {
       type: 'input',
       name: 'repo_name',

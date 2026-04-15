@@ -110,6 +110,13 @@ function initSchema() {
       locked_at TEXT,
       expires_at TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS scanner_config (
+      source TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT,
+      PRIMARY KEY (source, key)
+    );
   `);
 
   // Create indexes

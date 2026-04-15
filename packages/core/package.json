@@ -20,6 +20,9 @@
   "bin": {
     "autofix-hub": "./bin/autofix-hub.js"
   },
+  "scripts": {
+    "postinstall": "npm rebuild better-sqlite3 || true"
+  },
   "files": [
     "bin/",
     "src/"

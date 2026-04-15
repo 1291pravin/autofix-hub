@@ -63,12 +63,54 @@ function loadEffortMap() {
   return JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
 
+/**
+ * Load per-project scanner config from DB (scanner_config table).
+ * Returns an object of { key: value } for the given source.
+ */
+function loadScannerConfig(source) {
+  const { getDb } = require('./db');
+  const db = getDb();
+  try {
+    const rows = db.prepare('SELECT key, value FROM scanner_config WHERE source = ?').all(source);
+    const config = {};
+    for (const row of rows) {
+      config[row.key] = row.value;
+    }
+    return config;
+  } catch (_) {
+    return {};
+  }
+}
+
+/**
+ * Save per-project scanner config to DB (scanner_config table).
+ * @param {string} source - plugin name
+ * @param {object} data - key-value pairs to save
+ */
+function saveScannerConfig(source, data) {
+  const { getDb } = require('./db');
+  const db = getDb();
+  const upsert = db.prepare(
+    'INSERT OR REPLACE INTO scanner_config (source, key, value) VALUES (?, ?, ?)'
+  );
+  const saveAll = db.transaction(() => {
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined && value !== '') {
+        upsert.run(source, key, value);
+      }
+    }
+  });
+  saveAll();
+}
+
 module.exports = {
   getProjectRoot,
   loadCredentials,
   saveCredentials,
   loadScoringConfig,
   loadEffortMap,
+  loadScannerConfig,
+  saveScannerConfig,
   GLOBAL_CONFIG_DIR,
   CREDENTIALS_FILE,
 };

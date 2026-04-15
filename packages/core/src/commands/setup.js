@@ -8,6 +8,7 @@ const {
   getProjectRoot,
   loadCredentials,
   saveCredentials,
+  saveScannerConfig,
   GLOBAL_CONFIG_DIR,
 } = require('../config');
 const { getDb, closeDb } = require('../db');
@@ -102,7 +103,7 @@ async function setupCommand() {
       }
     }
 
-    // Run setup prompts if available
+    // Run setup prompts for credentials (auth only)
     if (typeof plugin.setupPrompts === 'function') {
       const questions = plugin.setupPrompts();
       if (questions && questions.length > 0) {
@@ -120,7 +121,7 @@ async function setupCommand() {
     console.log();
   }
 
-  // Save credentials
+  // Save credentials (auth only)
   if (isFirstRun || configuredCount > 0) {
     console.log(chalk.gray('Saving credentials to ~/.autofix-hub/credentials.json'));
     saveCredentials(credentials);
@@ -135,6 +136,24 @@ async function setupCommand() {
   console.log(`\nCreating project database... `);
   initSchema();
   console.log(chalk.green('✓') + ' .autofix-hub/issues.db');
+
+  // Collect per-project scanner config and save to DB
+  for (let i = 0; i < pluginList.length; i++) {
+    const info = pluginList[i];
+    const plugin = plugins.get(info.name);
+    if (!plugin || !info.installed) continue;
+
+    if (typeof plugin.projectConfigPrompts === 'function') {
+      const questions = plugin.projectConfigPrompts();
+      if (questions && questions.length > 0) {
+        console.log(chalk.bold(`\nProject config for ${info.displayName}:`));
+        const answers = await inquirer.prompt(questions);
+        saveScannerConfig(info.name, answers);
+        console.log(chalk.green('✓') + ` Saved project config for ${info.displayName}`);
+      }
+    }
+  }
+
   closeDb();
 
   // Scaffold config files
