@@ -16,7 +16,7 @@ const {
   getRejectionsByCategory,
   getStats,
 } = require('../metrics');
-const { getProjectRoot, loadCredentials, saveCredentials } = require('../config');
+const { getProjectRoot, loadCredentials, saveCredentials, loadScannerConfig, saveScannerConfig } = require('../config');
 
 /**
  * Create and configure the Express app.
@@ -339,10 +339,11 @@ function createApp() {
     }
   });
 
-  app.post('/api/scanners/:source/config', (req, res) => {
+  // Save auth credentials (global, ~/.autofix-hub/credentials.json)
+  app.post('/api/scanners/:source/credentials', (req, res) => {
     try {
       const creds = loadCredentials();
-      creds[req.params.source] = { ...creds[req.params.source], ...req.body };
+      creds[req.params.source] = { ...creds[req.params.source], ...req.body, configured: true };
       saveCredentials(creds);
       res.json({ success: true });
     } catch (err) {
@@ -350,9 +351,29 @@ function createApp() {
     }
   });
 
+  // Save per-project scanner config (DB scanner_config table)
+  app.post('/api/scanners/:source/project-config', (req, res) => {
+    try {
+      saveScannerConfig(req.params.source, req.body);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Read per-project scanner config
+  app.get('/api/scanners/:source/project-config', (req, res) => {
+    try {
+      const config = loadScannerConfig(req.params.source);
+      res.json({ config });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ─── Scanner Setup Fields ─────────────────────────────
 
-  // Get setup prompt fields for a scanner plugin
+  // Get setup prompt fields for a scanner plugin (credentials + project config)
   app.get('/api/scanners/:source/setup-fields', (req, res) => {
     try {
       const plugins = loadPlugins();
@@ -361,11 +382,19 @@ function createApp() {
         return res.status(404).json({ error: `Plugin ${req.params.source} not found` });
       }
 
-      const fields = typeof plugin.setupPrompts === 'function' ? plugin.setupPrompts() : [];
-      const creds = loadCredentials();
-      const saved = creds[req.params.source] || {};
+      const credentialFields = typeof plugin.setupPrompts === 'function' ? plugin.setupPrompts() : [];
+      const projectFields = typeof plugin.projectConfigPrompts === 'function' ? plugin.projectConfigPrompts() : [];
 
-      res.json({ fields, saved });
+      const creds = loadCredentials();
+      const savedCreds = creds[req.params.source] || {};
+      const savedProjectConfig = loadScannerConfig(req.params.source);
+
+      res.json({
+        fields: credentialFields,
+        projectFields,
+        saved: savedCreds,
+        savedProjectConfig,
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

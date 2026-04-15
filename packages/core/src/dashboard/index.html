@@ -1877,6 +1877,9 @@ function SettingsPage({ addToast }) {
   // Scanner credential state
   const [scannerFields, setScannerFields] = useState({});
   const [scannerCreds, setScannerCreds] = useState({});
+  // Per-project scanner config state
+  const [projectFields, setProjectFields] = useState({});
+  const [projectConfig, setProjectConfig] = useState({});
   const [credSaving, setCredSaving] = useState({});
   // Apiiro install/login state
   const [apiiroInstalling, setApiiroInstalling] = useState(false);
@@ -1895,6 +1898,8 @@ function SettingsPage({ addToast }) {
       api(`/scanners/${s.name}/setup-fields`).then(d => {
         setScannerFields(prev => ({...prev, [s.name]: d.fields || []}));
         setScannerCreds(prev => ({...prev, [s.name]: d.saved || {}}));
+        setProjectFields(prev => ({...prev, [s.name]: d.projectFields || []}));
+        setProjectConfig(prev => ({...prev, [s.name]: d.savedProjectConfig || {}}));
       }).catch(() => {});
     });
   }, [scanners]);
@@ -1912,11 +1917,11 @@ function SettingsPage({ addToast }) {
     setTesting(t => ({...t, [source]: false}));
   };
 
-  // Save scanner credentials
+  // Save scanner credentials (auth only → credentials.json)
   const saveCreds = async (source) => {
     setCredSaving(prev => ({...prev, [source]: true}));
     try {
-      await api(`/scanners/${source}/config`, {
+      await api(`/scanners/${source}/credentials`, {
         method: 'POST',
         body: scannerCreds[source] || {},
       });
@@ -1927,8 +1932,30 @@ function SettingsPage({ addToast }) {
     setCredSaving(prev => ({...prev, [source]: false}));
   };
 
+  // Save per-project scanner config (→ DB scanner_config table)
+  const saveProjectCfg = async (source) => {
+    setCredSaving(prev => ({...prev, [source + '_project']: true}));
+    try {
+      await api(`/scanners/${source}/project-config`, {
+        method: 'POST',
+        body: projectConfig[source] || {},
+      });
+      addToast(`${source} project config saved`, 'success');
+    } catch (e) {
+      addToast(`Save failed: ${e.message}`, 'error');
+    }
+    setCredSaving(prev => ({...prev, [source + '_project']: false}));
+  };
+
   const updateCred = (source, key, value) => {
     setScannerCreds(prev => ({
+      ...prev,
+      [source]: {...(prev[source] || {}), [key]: value}
+    }));
+  };
+
+  const updateProjectCfg = (source, key, value) => {
+    setProjectConfig(prev => ({
       ...prev,
       [source]: {...(prev[source] || {}), [key]: value}
     }));
@@ -2067,9 +2094,10 @@ function SettingsPage({ addToast }) {
                 </div>
               )}
 
-              {/* Credential form */}
+              {/* Credential form (auth — saved globally) */}
               {fields.length > 0 && (
                 <div>
+                  <div style={{fontSize:12, color:'var(--text-muted)', marginBottom:6, fontWeight:600}}>Credentials (global)</div>
                   <div className="scanner-cred-form">
                     {fields.map(f => (
                       <div key={f.name} className="env-field">
@@ -2090,6 +2118,32 @@ function SettingsPage({ addToast }) {
                     </button>
                     <button className="btn btn-sm" onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
                       {testing[s.name] ? 'Testing...' : 'Test Connection'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Project config form (per-project — saved to DB) */}
+              {(projectFields[s.name] || []).length > 0 && (
+                <div style={{marginTop:16}}>
+                  <div style={{fontSize:12, color:'var(--text-muted)', marginBottom:6, fontWeight:600}}>Project Config (per-project)</div>
+                  <div className="scanner-cred-form">
+                    {(projectFields[s.name] || []).map(f => (
+                      <div key={f.name} className="env-field">
+                        <label>{f.name}</label>
+                        {f.message && <div className="env-desc">{f.message}</div>}
+                        <input
+                          type="text"
+                          value={(projectConfig[s.name] || {})[f.name] || ''}
+                          placeholder={f.default || ''}
+                          onChange={e => updateProjectCfg(s.name, f.name, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="settings-actions">
+                    <button className="btn btn-primary btn-sm" onClick={() => saveProjectCfg(s.name)} disabled={credSaving[s.name + '_project']}>
+                      {credSaving[s.name + '_project'] ? 'Saving...' : 'Save Project Config'}
                     </button>
                   </div>
                 </div>

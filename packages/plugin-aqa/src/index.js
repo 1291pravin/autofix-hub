@@ -234,16 +234,19 @@ module.exports = {
       validate: (v) => v.trim() ? true : 'API key is required',
     },
     {
-      type: 'input',
-      name: 'test_id',
-      message: 'Default test ID for API fetch:',
-      default: '',
-    },
-    {
       type: 'password',
       name: 'user_api_key',
       message: 'Personal API key for AQA extension engine:',
       default: '',
+    },
+  ],
+
+  projectConfigPrompts: () => [
+    {
+      type: 'input',
+      name: 'test_id',
+      message: 'AQA test ID for this project:',
+      validate: (v) => v.trim() ? true : 'Test ID is required',
     },
   ],
 

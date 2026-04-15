@@ -3,7 +3,7 @@
 const chalk = require('chalk');
 const { getDb } = require('../db');
 const { initSchema } = require('../setup');
-const { loadCredentials, loadScoringConfig } = require('../config');
+const { loadCredentials, loadScoringConfig, loadScannerConfig } = require('../config');
 const { getPlugin } = require('../pluginLoader');
 const { dedupIssues } = require('../dedup');
 const { scoreIssue } = require('../scoring');
@@ -22,10 +22,12 @@ async function fetchCommand(source, opts = {}) {
 
   const credentials = loadCredentials();
   const scoringConfig = loadScoringConfig();
+  const scannerConfig = loadScannerConfig(source);
 
-  // Merge: CLI flags > saved credentials > defaults
+  // Merge: CLI flags > scanner_config (DB) > saved credentials > defaults
   const config = {
     ...credentials[source],
+    ...scannerConfig,
   };
 
   // Apply CLI overrides
