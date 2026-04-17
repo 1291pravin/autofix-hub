@@ -59,10 +59,24 @@ function createApp() {
     const total = db.prepare(`SELECT COUNT(*) as count FROM issues ${whereClause}`).get(...params).count;
 
     const issues = db.prepare(`
-      SELECT * FROM issues ${whereClause}
+      SELECT i.*,
+        (SELECT ic.cluster_id FROM issue_clusters ic
+         JOIN clusters c ON c.id = ic.cluster_id
+         WHERE ic.issue_id = i.id
+         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+      FROM issues i
+      ${whereClause}
       ORDER BY ${sortCol} ${sortOrder}
       LIMIT ? OFFSET ?
     `).all(...params, limitNum, offset);
+
+    // Use best cluster_id from join table if available
+    for (const issue of issues) {
+      if (issue.best_cluster_id) {
+        issue.cluster_id = issue.best_cluster_id;
+      }
+      delete issue.best_cluster_id;
+    }
 
     res.json({
       issues,
@@ -87,15 +101,25 @@ function createApp() {
     if (source) { where.push('source = ?'); params.push(source); }
 
     const issue = db.prepare(`
-      SELECT * FROM issues
+      SELECT i.*,
+        (SELECT ic.cluster_id FROM issue_clusters ic
+         JOIN clusters c ON c.id = ic.cluster_id
+         WHERE ic.issue_id = i.id
+         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+      FROM issues i
       WHERE ${where.join(' AND ')}
-      ORDER BY (CAST(impact_score AS REAL) / CASE WHEN estimated_minutes > 0 THEN estimated_minutes ELSE 15 END) DESC
+      ORDER BY (CAST(i.impact_score AS REAL) / CASE WHEN i.estimated_minutes > 0 THEN i.estimated_minutes ELSE 15 END) DESC
       LIMIT 1
     `).get(...params);
 
     if (!issue) {
       return res.json({ issue: null, message: 'No open issues found' });
     }
+
+    if (issue.best_cluster_id) {
+      issue.cluster_id = issue.best_cluster_id;
+    }
+    delete issue.best_cluster_id;
 
     res.json({ issue });
   });
@@ -104,10 +128,23 @@ function createApp() {
     const db = getDb();
     initSchema();
 
-    const issue = db.prepare('SELECT * FROM issues WHERE id = ?').get(req.params.id);
+    const issue = db.prepare(`
+      SELECT i.*,
+        (SELECT ic.cluster_id FROM issue_clusters ic
+         JOIN clusters c ON c.id = ic.cluster_id
+         WHERE ic.issue_id = i.id
+         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+      FROM issues i
+      WHERE i.id = ?
+    `).get(req.params.id);
     if (!issue) {
       return res.status(404).json({ error: 'Issue not found' });
     }
+
+    if (issue.best_cluster_id) {
+      issue.cluster_id = issue.best_cluster_id;
+    }
+    delete issue.best_cluster_id;
 
     // Attach metadata
     const metadata = db.prepare('SELECT key, value FROM issue_metadata WHERE issue_id = ?').all(req.params.id);
@@ -177,7 +214,21 @@ function createApp() {
       }
     }
 
-    const updated = db.prepare('SELECT * FROM issues WHERE id = ?').get(id);
+    const updated = db.prepare(`
+      SELECT i.*,
+        (SELECT ic.cluster_id FROM issue_clusters ic
+         JOIN clusters c ON c.id = ic.cluster_id
+         WHERE ic.issue_id = i.id
+         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+      FROM issues i
+      WHERE i.id = ?
+    `).get(id);
+
+    if (updated && updated.best_cluster_id) {
+      updated.cluster_id = updated.best_cluster_id;
+      delete updated.best_cluster_id;
+    }
+
     res.json({ issue: updated });
   });
 

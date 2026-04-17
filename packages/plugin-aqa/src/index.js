@@ -5,6 +5,10 @@ const https = require('https');
 const http = require('http');
 const url = require('url');
 
+// Feature flag: set to true to also include "check manually" issues
+// When false (default), only issues with aqa_status="needs fix" are processed
+const INCLUDE_MANUAL_CHECK = false;
+
 // AQA impact → normalized severity
 const SEVERITY_MAP = {
   'critical': 'critical',
@@ -637,8 +641,18 @@ module.exports = {
       tag_name: tagName,
     };
 
+    // Determine fix type from AQA status: "needs_fix" or "check_manually"
+    const fixType = (aqaStatus || '').toLowerCase().includes('needs fix') ? 'needs_fix' : 'check_manually';
+
+    // Skip "check manually" issues when the flag is off
+    if (!INCLUDE_MANUAL_CHECK && fixType === 'check_manually') {
+      return null;
+    }
+
     // Build rich metadata
     const metadata = {
+      // Fix type for filtering
+      fix_type: fixType,
       // WCAG
       wcag_criteria: wcagCriteria,
       wcag_guidance: wcagCriteria.map(c => WCAG_GUIDANCE[c] || null).filter(Boolean),
@@ -735,9 +749,13 @@ module.exports = {
     }
 
     // Cluster by WCAG criterion — groups different rules targeting the same requirement
+    // Skip if the rule_id already encodes the criterion (e.g., wcag22-1_4_3 → 1.4.3)
     if (meta.wcag_criteria && meta.wcag_criteria.length > 0) {
+      const ruleNorm = (ruleId || '').replace(/^wcag\d*-/, '').replace(/_/g, '.');
       for (const criterion of meta.wcag_criteria) {
-        keys.push(`wcag:${criterion}:context:${contextId}`);
+        if (criterion !== ruleNorm) {
+          keys.push(`wcag:${criterion}:context:${contextId}`);
+        }
       }
     }
 
@@ -868,8 +886,9 @@ module.exports = {
 
   promptTemplate: (issue) => {
     const category = issue.category;
-    const ruleId = issue.rule_id;
+    const filePath = issue.file_path || 'unknown file';
     const desc = issue.description;
+    const ruleId = issue.rule_id;
     const meta = issue.metadata || {};
 
     // --- Build rich context block from metadata ---

@@ -106,7 +106,7 @@ async function fetchCommand(source, opts = {}) {
     }
 
     issue.created_at = issue.created_at || new Date().toISOString();
-    issue.updated_at = new Date().toISOString();
+    issue.updated_at = issue.updated_at || new Date().toISOString();
     issue.status = issue.status || 'open';
   }
 

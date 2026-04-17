@@ -24,6 +24,8 @@ function clusterIssues(issues, plugin, db) {
 
   // Map: cluster_id → { key, issueIds[] }
   const clusters = new Map();
+  // Track all clusters each issue belongs to, so we pick the largest
+  const issueClusterMap = new Map(); // issue_id → Set<cluster_id>
 
   for (const issue of issues) {
     const keys = plugin.clusterKeys(issue);
@@ -35,6 +37,9 @@ function clusterIssues(issues, plugin, db) {
         clusters.set(cid, { key, source: issue.source, issueIds: [] });
       }
       clusters.get(cid).issueIds.push(issue.id);
+
+      if (!issueClusterMap.has(issue.id)) issueClusterMap.set(issue.id, new Set());
+      issueClusterMap.get(issue.id).add(cid);
     }
   }
 
@@ -42,7 +47,6 @@ function clusterIssues(issues, plugin, db) {
     INSERT INTO clusters (id, source, cluster_key, issue_count, status, created_at)
     VALUES (?, ?, ?, ?, 'open', ?)
     ON CONFLICT(id) DO UPDATE SET
-      issue_count = excluded.issue_count,
       cluster_key = excluded.cluster_key
   `);
 
@@ -57,29 +61,47 @@ function clusterIssues(issues, plugin, db) {
   const now = new Date().toISOString();
 
   const applyAll = db.transaction(() => {
+    // Collect valid cluster IDs (2+ issues in this batch)
+    const validClusterIds = new Set();
+
     for (const [cid, data] of clusters) {
       // Only create clusters for 2+ issues
       if (data.issueIds.length < 2) continue;
 
+      validClusterIds.add(cid);
       upsertCluster.run(cid, data.source, data.key, data.issueIds.length, now);
 
       for (const issueId of data.issueIds) {
-        updateIssueCluster.run(cid, issueId);
         insertJoin.run(issueId, cid);
       }
     }
 
-    // Recalculate issue_count from the join table for accuracy
-    const clusterIds = Array.from(clusters.entries())
-      .filter(([, d]) => d.issueIds.length >= 2)
-      .map(([cid]) => cid);
-    if (clusterIds.length > 0) {
+    // Recalculate issue_count from the join table for accuracy (includes old + new issues)
+    if (validClusterIds.size > 0) {
+      const clusterIds = Array.from(validClusterIds);
       const ph = clusterIds.map(() => '?').join(',');
       db.prepare(`
         UPDATE clusters SET issue_count = (
           SELECT COUNT(*) FROM issue_clusters WHERE issue_clusters.cluster_id = clusters.id
         ) WHERE id IN (${ph})
       `).run(...clusterIds);
+    }
+
+    // Set each issue's denormalized cluster_id to its largest cluster
+    for (const [issueId, cidSet] of issueClusterMap) {
+      let bestCid = null;
+      let bestCount = 0;
+      for (const cid of cidSet) {
+        if (!validClusterIds.has(cid)) continue;
+        const data = clusters.get(cid);
+        if (data && data.issueIds.length > bestCount) {
+          bestCount = data.issueIds.length;
+          bestCid = cid;
+        }
+      }
+      if (bestCid) {
+        updateIssueCluster.run(bestCid, issueId);
+      }
     }
   });
 

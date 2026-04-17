@@ -183,6 +183,7 @@ function extractDepInfo(scannerData) {
 /**
  * Extract rich context from Apiiro's scanner_data JSON.
  * Pulls insights, actionsTaken, policyTags, component, and business context.
+ * Also handles additional fields from detailed risk responses.
  */
 function extractApiiroContext(scannerData) {
   try {
@@ -222,6 +223,15 @@ function extractApiiroContext(scannerData) {
     // Risk URL for human reference
     const apiiroRiskUrl = data.apiiroRiskUrl || '';
 
+    // Additional fields from detailed risk responses
+    const riskAnalysis = data.riskAnalysis || data.analysis || '';
+    const impactAssessment = data.impactAssessment || data.impact || '';
+    const affectedCodePaths = data.affectedCodePaths || data.codePaths || [];
+    const affectedDependencies = data.affectedDependencies || data.dependencies || [];
+    const securityContext = data.securityContext || data.threatModel || '';
+    const threatModeling = data.threatModeling || '';
+    const additionalMetadata = data.metadata || {};
+
     return {
       insights,
       actionsTaken,
@@ -234,6 +244,13 @@ function extractApiiroContext(scannerData) {
       businessImpact,
       sourceUrl,
       apiiroRiskUrl,
+      riskAnalysis,
+      impactAssessment,
+      affectedCodePaths,
+      affectedDependencies,
+      securityContext,
+      threatModeling,
+      additionalMetadata,
     };
   } catch (_) {
     return {
@@ -248,6 +265,13 @@ function extractApiiroContext(scannerData) {
       businessImpact: '',
       sourceUrl: '',
       apiiroRiskUrl: '',
+      riskAnalysis: '',
+      impactAssessment: '',
+      affectedCodePaths: [],
+      affectedDependencies: [],
+      securityContext: '',
+      threatModeling: '',
+      additionalMetadata: {},
     };
   }
 }
@@ -458,20 +482,26 @@ module.exports = {
 
   clusterKeys: (issue) => {
     const category = issue.category;
+    const keys = [];
+
+    // Category-level key: groups all issues of the same category together
+    if (category) {
+      keys.push(`category:${category}`);
+    }
 
     if (category === 'secret') {
       const hash = hashSecretEnds(issue.scanner_data);
-      return [`${issue.rule_id}:secret:${hash}`];
-    }
-
-    if (category === 'sca_minor' || category === 'sca_major' || category === 'license') {
+      keys.push(`${issue.rule_id}:secret:${hash}`);
+    } else if (category === 'sca_minor' || category === 'sca_major' || category === 'license') {
       const dep = extractDepName(issue.scanner_data);
-      return [`${issue.rule_id}:dep:${dep}`];
+      keys.push(`${issue.rule_id}:dep:${dep}`);
+    } else {
+      // SAST and others: group by rule + directory
+      const dir = issue.file_path ? path.dirname(issue.file_path) : 'unknown';
+      keys.push(`${issue.rule_id}:${dir}`);
     }
 
-    // SAST and others: group by rule + directory
-    const dir = issue.file_path ? path.dirname(issue.file_path) : 'unknown';
-    return [`${issue.rule_id}:${dir}`];
+    return keys;
   },
 
   effortEstimate: (issue) => {
@@ -609,6 +639,34 @@ module.exports = {
       if (apiiroCtx.businessImpact) bizParts.push(`Business Impact: ${apiiroCtx.businessImpact}`);
       apiiroAppendix.push(`**Business Context:** ${bizParts.join(' | ')}`);
     }
+
+    // Add instruction to fetch detailed risk info from Apiiro CLI
+    const originalRiskId = scannerContext.id || null;
+    if (originalRiskId) {
+      apiiroAppendix.push(`\n### For More Details`);
+      apiiroAppendix.push(`Run these commands to get detailed risk analysis and remediation steps:`);
+      apiiroAppendix.push(`- \`apiiro risks get ${originalRiskId}\` - View detailed risk information`);
+      apiiroAppendix.push(`- \`apiiro risks remediate ${originalRiskId}\` - Get step-by-step remediation instructions`);
+    }
+
+    // Add additional context from detailed risk data if available
+    if (apiiroCtx.riskAnalysis) {
+      apiiroAppendix.push(`\n### Risk Analysis`);
+      apiiroAppendix.push(apiiroCtx.riskAnalysis);
+    }
+    if (apiiroCtx.impactAssessment) {
+      apiiroAppendix.push(`\n### Impact Assessment`);
+      apiiroAppendix.push(apiiroCtx.impactAssessment);
+    }
+    if (apiiroCtx.affectedCodePaths && apiiroCtx.affectedCodePaths.length > 0) {
+      apiiroAppendix.push(`\n### Affected Code Paths`);
+      apiiroCtx.affectedCodePaths.forEach(p => apiiroAppendix.push(`- ${p}`));
+    }
+    if (apiiroCtx.securityContext) {
+      apiiroAppendix.push(`\n### Security Context`);
+      apiiroAppendix.push(apiiroCtx.securityContext);
+    }
+
     const appendixBlock = apiiroAppendix.length > 0 ? '\n' + apiiroAppendix.join('\n') : '';
 
     let template = '';
@@ -865,11 +923,13 @@ module.exports = {
     let riskCategory = '';
     let riskLevel = '';
     let remediation = '';
+    let originalRiskId = '';
     try {
       const data = typeof issues[0].scanner_data === 'string' ? JSON.parse(issues[0].scanner_data) : (issues[0].scanner_data || {});
       riskCategory = data.riskCategory || '';
       riskLevel = data.riskLevel || data.severity || '';
       remediation = data.remediation || data.recommendation || data.fixAdvice || '';
+      originalRiskId = data.id || '';
     } catch (_) {}
 
     // Build inventory table with file, line, and severity per issue
@@ -904,6 +964,11 @@ module.exports = {
       `2. Apply the same fix pattern consistently to each location`,
       `3. If fixes require context-specific values, tailor each one — do not use a generic placeholder`,
       `4. Verify no regressions are introduced across the ${issues.length} locations`,
+      ``,
+      originalRiskId ? `### For More Details` : '',
+      originalRiskId ? `Run these commands to get detailed risk analysis and remediation steps:` : '',
+      originalRiskId ? `- \`apiiro risks get ${originalRiskId}\` - View detailed risk information` : '',
+      originalRiskId ? `- \`apiiro risks remediate ${originalRiskId}\` - Get step-by-step remediation instructions` : '',
       ``,
       `**Important:** Minimal change, follow existing code style. Fix only these issues.`,
     ];

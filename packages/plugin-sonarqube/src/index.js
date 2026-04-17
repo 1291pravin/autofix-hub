@@ -554,6 +554,7 @@ module.exports = {
 
     const ruleId = issues[0].rule_id;
     const category = issues[0].category;
+    const desc = issues[0].description;
 
     // Build rule link for standard RSPEC rules (lang:S1234 format)
     const ruleMatch = ruleId ? ruleId.match(/^([^:]+):S(\d+)$/) : null;
