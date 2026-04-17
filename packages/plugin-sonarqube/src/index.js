@@ -235,11 +235,12 @@ module.exports = {
   clusterKeys: (issue) => {
     const ruleId = issue.rule_id;
     const dir = issue.file_path ? path.dirname(issue.file_path) : 'unknown';
-    const category = issue.category;
 
     return [
-      `${ruleId}:dir:${dir}`,
-      `${ruleId}:cat:${category}`,
+      // exact: same rule in same directory — one code pattern, one fix
+      { key: `${ruleId}:dir:${dir}`, tier: 'exact' },
+      // tight: same rule anywhere — same remediation
+      { key: `${ruleId}`, tier: 'tight' },
     ];
   },
 

@@ -2,7 +2,7 @@
 
 const chalk = require('chalk');
 const { getDb } = require('../db');
-const { initSchema } = require('../setup');
+const { initSchema, migrateIssueClusters } = require('../setup');
 const { loadCredentials, loadScoringConfig, loadScannerConfig } = require('../config');
 const { getPlugin } = require('../pluginLoader');
 const { dedupIssues } = require('../dedup');
@@ -19,6 +19,9 @@ async function fetchCommand(source, opts = {}) {
   const plugin = getPlugin(source);
   const db = getDb();
   initSchema();
+  // If the tier migration just wiped old cluster data, rebuild from current plugins.
+  // No-op once the join table is populated.
+  migrateIssueClusters();
 
   const credentials = loadCredentials();
   const scoringConfig = loadScoringConfig();

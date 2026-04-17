@@ -285,6 +285,64 @@ function extractDepName(scannerData) {
 }
 
 /**
+ * SPDX-ish license family taxonomy. Used for `tight` clustering so that
+ * a batch of GPL-family findings can be reviewed together even if the
+ * exact SPDX ID varies (GPL-2.0 vs GPL-3.0 vs AGPL-3.0).
+ */
+const LICENSE_FAMILY = [
+  { family: 'agpl',        patterns: [/\bagpl\b/i] },
+  { family: 'gpl',         patterns: [/\bgpl\b/i, /\bgnu general public/i] },
+  { family: 'lgpl',        patterns: [/\blgpl\b/i, /lesser general public/i] },
+  { family: 'mpl',         patterns: [/\bmpl\b/i, /mozilla public/i] },
+  { family: 'epl',         patterns: [/\bepl\b/i, /eclipse public/i] },
+  { family: 'cddl',        patterns: [/\bcddl\b/i] },
+  { family: 'apache',      patterns: [/apache/i] },
+  { family: 'bsd',         patterns: [/\bbsd\b/i] },
+  { family: 'mit',         patterns: [/\bmit\b/i] },
+  { family: 'isc',         patterns: [/\bisc\b/i] },
+  { family: 'unlicense',   patterns: [/unlicense/i, /\bcc0\b/i, /public[- ]?domain/i] },
+  { family: 'proprietary', patterns: [/proprietary/i, /commercial/i] },
+];
+
+function licenseFamily(licenseName) {
+  if (!licenseName) return '';
+  for (const { family, patterns } of LICENSE_FAMILY) {
+    if (patterns.some(p => p.test(licenseName))) return family;
+  }
+  return 'other';
+}
+
+/**
+ * Best-effort secret type detection from Apiiro's rule/finding name.
+ * Used for `tight` clustering so AWS keys across different files/dirs
+ * cluster into one "rotate AWS creds" batch even if the literal value
+ * (and thus the exact-tier hash) differs.
+ */
+function detectSecretType(scannerData) {
+  try {
+    const data = typeof scannerData === 'string' ? JSON.parse(scannerData) : (scannerData || {});
+    const haystack = [
+      data.findingName, data.ruleName, data.secretType, data.type,
+    ].filter(Boolean).join(' ').toLowerCase();
+    if (!haystack) return '';
+    if (/aws/.test(haystack)) return 'aws';
+    if (/gcp|google/.test(haystack)) return 'gcp';
+    if (/azure/.test(haystack)) return 'azure';
+    if (/github/.test(haystack)) return 'github';
+    if (/gitlab/.test(haystack)) return 'gitlab';
+    if (/slack/.test(haystack)) return 'slack';
+    if (/stripe/.test(haystack)) return 'stripe';
+    if (/private[- ]?key|pem|rsa|ssh/.test(haystack)) return 'private-key';
+    if (/jwt|bearer|token/.test(haystack)) return 'token';
+    if (/password|passwd|credential/.test(haystack)) return 'password';
+    if (/api[- ]?key/.test(haystack)) return 'api-key';
+    return 'generic';
+  } catch (_) {
+    return '';
+  }
+}
+
+/**
  * Get repo name from config or git remote.
  */
 function getRepoName(config) {
@@ -483,22 +541,69 @@ module.exports = {
   clusterKeys: (issue) => {
     const category = issue.category;
     const keys = [];
-
-    // Category-level key: groups all issues of the same category together
-    if (category) {
-      keys.push(`category:${category}`);
-    }
+    const dir = issue.file_path ? path.dirname(issue.file_path) : 'unknown';
 
     if (category === 'secret') {
+      // exact: same literal secret value detected (hash of first/last 4 chars)
       const hash = hashSecretEnds(issue.scanner_data);
-      keys.push(`${issue.rule_id}:secret:${hash}`);
-    } else if (category === 'sca_minor' || category === 'sca_major' || category === 'license') {
-      const dep = extractDepName(issue.scanner_data);
-      keys.push(`${issue.rule_id}:dep:${dep}`);
+      keys.push({ key: `${issue.rule_id}:secret:${hash}`, tier: 'exact' });
+      // tight: same secret type in same directory — one rotation batch
+      const secretType = detectSecretType(issue.scanner_data);
+      if (secretType) {
+        keys.push({ key: `secret:type:${secretType}:dir:${dir}`, tier: 'tight' });
+      }
+    } else if (category === 'license') {
+      // License findings: cluster by SPDX license name, not by the broad category.
+      // Without this, every license issue (regardless of which license) collapses
+      // into one giant "license" bucket — unreviewable.
+      const apiiroCtx = extractApiiroContext(issue.scanner_data);
+      const depInfo = extractDepInfo(issue.scanner_data);
+      const licenseName = (apiiroCtx.licenseName || '').trim();
+      const licenseNorm = licenseName.toLowerCase();
+      const depName = depInfo.name && depInfo.name !== 'unknown' ? depInfo.name : '';
+
+      if (licenseNorm && depName) {
+        // exact: same license on same dependency (usually one fix unit)
+        keys.push({ key: `license:spdx:${licenseNorm}:dep:${depName}`, tier: 'exact' });
+      }
+      if (licenseNorm) {
+        // tight: same SPDX license across any dep — compliance decision is per-license
+        keys.push({ key: `license:spdx:${licenseNorm}`, tier: 'tight' });
+        // tight: same family (GPL-2.0 + GPL-3.0 + AGPL share a review path)
+        const fam = licenseFamily(licenseNorm);
+        if (fam && fam !== 'other') {
+          keys.push({ key: `license:family:${fam}`, tier: 'tight' });
+        }
+      }
+      if (!licenseNorm && depName) {
+        // Fallback when the license name couldn't be parsed
+        keys.push({ key: `license:dep:${depName}`, tier: 'tight' });
+      }
+    } else if (category === 'sca_minor' || category === 'sca_major') {
+      const depInfo = extractDepInfo(issue.scanner_data);
+      const depName = depInfo.name && depInfo.name !== 'unknown' ? depInfo.name : '';
+
+      // exact: same CVE across the codebase — one advisory, one fix
+      for (const cveId of depInfo.cves || []) {
+        if (cveId) keys.push({ key: `cve:${cveId.toLowerCase()}`, tier: 'exact' });
+      }
+      // exact: identical upgrade path (pkg X vA -> vB)
+      if (depName && depInfo.currentVersion && depInfo.recommendedVersion) {
+        keys.push({
+          key: `dep:upgrade:${depName}:${depInfo.currentVersion}->${depInfo.recommendedVersion}`,
+          tier: 'exact',
+        });
+      }
+      // tight: same dependency, any CVE — single bump usually addresses multiple
+      if (depName) {
+        keys.push({ key: `dep:${depName}`, tier: 'tight' });
+      }
     } else {
-      // SAST and others: group by rule + directory
-      const dir = issue.file_path ? path.dirname(issue.file_path) : 'unknown';
-      keys.push(`${issue.rule_id}:${dir}`);
+      // SAST / misconfig / pii / supply_chain / other
+      // exact: same rule in same directory (usually a consistent code pattern)
+      keys.push({ key: `${issue.rule_id}:${dir}`, tier: 'exact' });
+      // tight: same rule anywhere — same remediation pattern
+      keys.push({ key: `${issue.rule_id}`, tier: 'tight' });
     }
 
     return keys;

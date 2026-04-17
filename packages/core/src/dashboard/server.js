@@ -63,7 +63,10 @@ function createApp() {
         (SELECT ic.cluster_id FROM issue_clusters ic
          JOIN clusters c ON c.id = ic.cluster_id
          WHERE ic.issue_id = i.id
-         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+         ORDER BY
+           CASE c.tier WHEN 'exact' THEN 2 WHEN 'tight' THEN 1 ELSE 0 END DESC,
+           c.issue_count DESC
+         LIMIT 1) as best_cluster_id
       FROM issues i
       ${whereClause}
       ORDER BY ${sortCol} ${sortOrder}
@@ -105,7 +108,10 @@ function createApp() {
         (SELECT ic.cluster_id FROM issue_clusters ic
          JOIN clusters c ON c.id = ic.cluster_id
          WHERE ic.issue_id = i.id
-         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+         ORDER BY
+           CASE c.tier WHEN 'exact' THEN 2 WHEN 'tight' THEN 1 ELSE 0 END DESC,
+           c.issue_count DESC
+         LIMIT 1) as best_cluster_id
       FROM issues i
       WHERE ${where.join(' AND ')}
       ORDER BY (CAST(i.impact_score AS REAL) / CASE WHEN i.estimated_minutes > 0 THEN i.estimated_minutes ELSE 15 END) DESC
@@ -133,7 +139,10 @@ function createApp() {
         (SELECT ic.cluster_id FROM issue_clusters ic
          JOIN clusters c ON c.id = ic.cluster_id
          WHERE ic.issue_id = i.id
-         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+         ORDER BY
+           CASE c.tier WHEN 'exact' THEN 2 WHEN 'tight' THEN 1 ELSE 0 END DESC,
+           c.issue_count DESC
+         LIMIT 1) as best_cluster_id
       FROM issues i
       WHERE i.id = ?
     `).get(req.params.id);
@@ -219,7 +228,10 @@ function createApp() {
         (SELECT ic.cluster_id FROM issue_clusters ic
          JOIN clusters c ON c.id = ic.cluster_id
          WHERE ic.issue_id = i.id
-         ORDER BY c.issue_count DESC LIMIT 1) as best_cluster_id
+         ORDER BY
+           CASE c.tier WHEN 'exact' THEN 2 WHEN 'tight' THEN 1 ELSE 0 END DESC,
+           c.issue_count DESC
+         LIMIT 1) as best_cluster_id
       FROM issues i
       WHERE i.id = ?
     `).get(id);
@@ -256,7 +268,9 @@ function createApp() {
       FROM clusters c
       LEFT JOIN (SELECT cluster_id, COUNT(*) as cnt FROM issue_clusters GROUP BY cluster_id) jc ON jc.cluster_id = c.id
       ${whereClause}
-      ORDER BY issue_count DESC
+      ORDER BY
+        CASE c.tier WHEN 'exact' THEN 2 WHEN 'tight' THEN 1 ELSE 0 END DESC,
+        issue_count DESC
     `).all(...params);
 
     res.json({ clusters });

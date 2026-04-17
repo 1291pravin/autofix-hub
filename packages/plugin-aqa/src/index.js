@@ -729,32 +729,32 @@ module.exports = {
     const meta = issue.metadata || {};
     const keys = [];
 
-    // Cluster by (ruleId, flowId/pageId)
-    const contextId = meta.context_id || 'unknown';
-    keys.push(`${ruleId}:context:${contextId}`);
-
-    // Cluster by (ruleId, normalizedSelector) — groups same pattern across pages
+    // exact: same rule + same normalized selector — nearly always the same fix unit
     const selector = meta.selector;
     if (selector) {
-      keys.push(`${ruleId}:selector:${normalizeSelector(selector)}`);
+      keys.push({ key: `${ruleId}:selector:${normalizeSelector(selector)}`, tier: 'exact' });
     }
 
-    // Cluster by (ruleId, page URL path) — groups all violations of same rule on a page
+    // tight: same rule in the same flow/page context
+    const contextId = meta.context_id || 'unknown';
+    keys.push({ key: `${ruleId}:context:${contextId}`, tier: 'tight' });
+
+    // tight: same rule on same page path — a page-wide sweep
     const pageUrl = meta.page_url || '';
     if (pageUrl) {
       try {
         const pathname = new url.URL(pageUrl, 'http://localhost').pathname;
-        keys.push(`${ruleId}:page:${pathname}`);
+        keys.push({ key: `${ruleId}:page:${pathname}`, tier: 'tight' });
       } catch (_) {}
     }
 
-    // Cluster by WCAG criterion — groups different rules targeting the same requirement
-    // Skip if the rule_id already encodes the criterion (e.g., wcag22-1_4_3 → 1.4.3)
+    // tight: WCAG criterion across different rules (same compliance requirement)
+    // Skip if the rule already encodes the criterion (e.g., wcag22-1_4_3 → 1.4.3)
     if (meta.wcag_criteria && meta.wcag_criteria.length > 0) {
       const ruleNorm = (ruleId || '').replace(/^wcag\d*-/, '').replace(/_/g, '.');
       for (const criterion of meta.wcag_criteria) {
         if (criterion !== ruleNorm) {
-          keys.push(`wcag:${criterion}:context:${contextId}`);
+          keys.push({ key: `wcag:${criterion}:context:${contextId}`, tier: 'tight' });
         }
       }
     }

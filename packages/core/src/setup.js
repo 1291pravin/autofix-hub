@@ -74,7 +74,8 @@ function initSchema() {
       issue_count INTEGER,
       status TEXT,
       fix_branch TEXT,
-      created_at TEXT
+      created_at TEXT,
+      tier TEXT DEFAULT 'exact'
     );
 
     CREATE TABLE IF NOT EXISTS issue_clusters (
@@ -119,6 +120,17 @@ function initSchema() {
     );
   `);
 
+  // ALTER migrations for pre-existing DBs created before a column existed.
+  const clusterCols = db.prepare("PRAGMA table_info(clusters)").all().map(c => c.name);
+  if (!clusterCols.includes('tier')) {
+    db.exec(`ALTER TABLE clusters ADD COLUMN tier TEXT DEFAULT 'exact'`);
+    // Invalidate old cluster data so tier-aware rebuild can run cleanly.
+    // migrateIssueClusters will repopulate from current plugin clusterKeys.
+    db.exec('DELETE FROM issue_clusters');
+    db.exec('DELETE FROM clusters');
+    db.exec('UPDATE issues SET cluster_id = NULL');
+  }
+
   // Create indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_issues_source_status ON issues (source, status);
@@ -131,6 +143,7 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_locks_expires_at ON locks (expires_at);
     CREATE INDEX IF NOT EXISTS idx_issue_clusters_cluster_id ON issue_clusters (cluster_id);
     CREATE INDEX IF NOT EXISTS idx_issue_clusters_issue_id ON issue_clusters (issue_id);
+    CREATE INDEX IF NOT EXISTS idx_clusters_source_tier ON clusters (source, tier);
   `);
 }
 
@@ -142,25 +155,22 @@ function initSchema() {
 function migrateIssueClusters() {
   const db = getDb();
 
-  // Check if migration is needed: if issue_clusters is empty but clusters exist
-  const clusterCount = db.prepare('SELECT COUNT(*) as cnt FROM clusters').get().cnt;
+  // Skip if the join table is already populated — clustering has been done.
+  // We run when join is empty AND there are issues to (re-)cluster.
   const joinCount = db.prepare('SELECT COUNT(*) as cnt FROM issue_clusters').get().cnt;
+  if (joinCount > 0) return;
 
-  if (clusterCount === 0 || joinCount > 0) return; // Nothing to migrate or already done
+  const issueCount = db.prepare('SELECT COUNT(*) as cnt FROM issues WHERE is_duplicate = 0').get().cnt;
+  if (issueCount === 0) return;
 
-  // Re-cluster all issues using plugin clusterKeys to get proper many-to-many
   try {
     const { loadPlugins } = require('./pluginLoader');
-    const { clusterHash } = require('./clustering');
+    const { clusterIssues } = require('./clustering');
     const plugins = loadPlugins();
-
-    const insertJoin = db.prepare(
-      'INSERT OR IGNORE INTO issue_clusters (issue_id, cluster_id) VALUES (?, ?)'
-    );
 
     const allIssues = db.prepare('SELECT * FROM issues WHERE is_duplicate = 0').all();
 
-    // Hydrate metadata for all issues
+    // Hydrate metadata so plugin clusterKeys() can read from issue.metadata
     const allMeta = db.prepare('SELECT issue_id, key, value FROM issue_metadata').all();
     const metaMap = new Map();
     for (const row of allMeta) {
@@ -168,57 +178,24 @@ function migrateIssueClusters() {
       const obj = metaMap.get(row.issue_id);
       try { obj[row.key] = JSON.parse(row.value); } catch (_) { obj[row.key] = row.value; }
     }
+
+    const bySource = new Map();
     for (const issue of allIssues) {
       issue.metadata = metaMap.get(issue.id) || {};
+      if (!bySource.has(issue.source)) bySource.set(issue.source, []);
+      bySource.get(issue.source).push(issue);
     }
 
-    // Pre-load all cluster IDs to avoid per-issue queries
-    const existingClusterIds = new Set(
-      db.prepare('SELECT id FROM clusters').all().map(r => r.id)
-    );
+    for (const [source, issues] of bySource) {
+      const plugin = plugins.get(source);
+      if (!plugin || typeof plugin.clusterKeys !== 'function') continue;
+      clusterIssues(issues, plugin, db);
+    }
 
-    const recluster = db.transaction(() => {
-      for (const issue of allIssues) {
-        const plugin = plugins.get(issue.source);
-        if (!plugin || typeof plugin.clusterKeys !== 'function') continue;
-
-        const keys = plugin.clusterKeys(issue);
-        if (!keys || keys.length === 0) continue;
-
-        for (const key of keys) {
-          const cid = clusterHash(issue.source, key);
-          if (existingClusterIds.has(cid)) {
-            insertJoin.run(issue.id, cid);
-          }
-        }
-      }
-
-      // Update issue_count from join table for ALL clusters
-      db.exec(`
-        UPDATE clusters SET issue_count = (
-          SELECT COUNT(*) FROM issue_clusters WHERE issue_clusters.cluster_id = clusters.id
-        )
-      `);
-
-      // Delete stale clusters that have 0 actual issues in the join table
-      db.exec('DELETE FROM clusters WHERE issue_count = 0');
-    });
-
-    recluster();
-  } catch (err) {
-    // If re-clustering fails (e.g., plugins not available), fall back to basic backfill
-    console.warn(`Warning: Re-clustering migration partial: ${err.message}`);
-    // Basic fallback: backfill from cluster_id column
-    db.exec(`
-      INSERT OR IGNORE INTO issue_clusters (issue_id, cluster_id)
-      SELECT id, cluster_id FROM issues WHERE cluster_id IS NOT NULL
-    `);
-    db.exec(`
-      UPDATE clusters SET issue_count = (
-        SELECT COUNT(*) FROM issue_clusters WHERE issue_clusters.cluster_id = clusters.id
-      )
-    `);
+    // Drop clusters that still have zero members after rebuild
     db.exec('DELETE FROM clusters WHERE issue_count = 0');
+  } catch (err) {
+    console.warn(`Warning: cluster rebuild skipped: ${err.message}`);
   }
 }
 

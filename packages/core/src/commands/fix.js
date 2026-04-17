@@ -16,12 +16,16 @@ async function fixNextCommand(source) {
   const db = getDb();
   initSchema();
 
-  // Try cluster first (batch value), then individual issues
+  // Try cluster first (batch value), then individual issues.
+  // Prefer `exact` clusters (a true fix unit) over `tight` (a review family),
+  // then break ties by issue_count.
   const cluster = db.prepare(`
-    SELECT c.id, c.cluster_key, c.issue_count, c.source
+    SELECT c.id, c.cluster_key, c.issue_count, c.source, c.tier
     FROM clusters c
     WHERE c.source = ? AND c.status = 'open'
-    ORDER BY c.issue_count DESC
+    ORDER BY
+      CASE c.tier WHEN 'exact' THEN 2 WHEN 'tight' THEN 1 ELSE 0 END DESC,
+      c.issue_count DESC
     LIMIT 1
   `).get(source);
 
