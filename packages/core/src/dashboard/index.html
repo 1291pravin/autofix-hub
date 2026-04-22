@@ -1194,7 +1194,7 @@ function IssueDetailPage({ issueId, addToast }) {
   const renderMarkdown = (text) => {
     if (!text) return '';
     try {
-      return marked.parse(text);
+      return marked.parse(text, { breaks: true });
     } catch (e) {
       return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
     }
@@ -1685,7 +1685,7 @@ function ClusterDetailPage({ clusterId, addToast }) {
                 <div style={{marginTop:10}}>Generating batch prompt...</div>
               </div>
             ) : (
-              <div className="prompt-rendered" dangerouslySetInnerHTML={{__html: (() => { try { return marked.parse(batchPrompt); } catch (e) { return batchPrompt.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>'); } })()}} />
+              <div className="prompt-rendered" dangerouslySetInnerHTML={{__html: (() => { try { return marked.parse(batchPrompt, { breaks: true }); } catch (e) { return batchPrompt.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>'); } })()}} />
             )
           )}
         </div>
