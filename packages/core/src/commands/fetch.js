@@ -2,8 +2,8 @@
 
 const chalk = require('chalk');
 const { getDb } = require('../db');
-const { initSchema } = require('../setup');
-const { loadCredentials, loadScoringConfig, loadProjectEnv } = require('../config');
+const { initSchema, migrateIssueClusters } = require('../setup');
+const { loadCredentials, loadScoringConfig, loadScannerConfig } = require('../config');
 const { getPlugin } = require('../pluginLoader');
 const { dedupIssues } = require('../dedup');
 const { scoreIssue } = require('../scoring');
@@ -11,18 +11,42 @@ const { clusterIssues } = require('../clustering');
 
 /**
  * Fetch issues from a scanner source, normalize, dedup, score, cluster, and insert into DB.
+ *
+ * @param {string} source - Plugin name (e.g., 'aqa', 'apiiro', 'sonarqube')
+ * @param {object} opts - CLI options (--method, --engine, --urls, --api-key, etc.)
  */
-async function fetchCommand(source) {
+async function fetchCommand(source, opts = {}) {
   const plugin = getPlugin(source);
   const db = getDb();
   initSchema();
+  // If the tier migration just wiped old cluster data, rebuild from current plugins.
+  // No-op once the join table is populated.
+  migrateIssueClusters();
 
   const credentials = loadCredentials();
   const scoringConfig = loadScoringConfig();
+  const scannerConfig = loadScannerConfig(source);
+
+  // Merge: CLI flags > scanner_config (DB) > saved credentials > defaults
   const config = {
     ...credentials[source],
-    env: process.env,
+    ...scannerConfig,
   };
+
+  // Apply CLI overrides
+  if (opts.method) config.method = opts.method;
+  if (opts.engine) config.scanEngine = opts.engine;
+  if (opts.urls) config.urls = opts.urls;
+  if (opts.apiKey) config.api_key = opts.apiKey;
+  if (opts.teamSlug) config.team_slug = opts.teamSlug;
+  if (opts.testId) config.test_id = opts.testId;
+  if (opts.suiteId) config.aqaSuiteId = opts.suiteId;
+  if (opts.ruleset) config.ruleset = opts.ruleset;
+  if (opts.headless) config.headless = true;
+
+  // For aqa engine, also set the apiKey/teamSlug fields used by the extension code
+  if (opts.apiKey) config.apiKey = opts.apiKey;
+  if (opts.teamSlug) config.teamSlug = opts.teamSlug;
 
   // 1. Fetch raw issues
   console.log(chalk.cyan(`Fetching issues from ${plugin.displayName || source}...`));
@@ -30,7 +54,11 @@ async function fetchCommand(source) {
   try {
     rawIssues = await plugin.fetch(config);
   } catch (err) {
-    console.error(chalk.red(`Fetch failed: ${err.message}`));
+    const msg = `Fetch failed: ${err.message}`;
+    console.error(chalk.red(msg));
+    if (opts.json) {
+      throw new Error(msg);
+    }
     process.exit(1);
   }
 
@@ -41,6 +69,19 @@ async function fetchCommand(source) {
   }
 
   console.log(chalk.gray(`  Raw issues: ${rawIssues.length}`));
+
+  // Dry-run: just print summary and exit
+  if (opts.dryRun) {
+    console.log(chalk.yellow('\n[dry-run] Would insert the following:'));
+    console.log(`  Source: ${source}`);
+    console.log(`  Raw issues: ${rawIssues.length}`);
+    const normalized = rawIssues.map(raw => plugin.normalize(raw)).filter(Boolean);
+    console.log(`  Normalized: ${normalized.length}`);
+    if (opts.json) {
+      console.log(JSON.stringify(normalized, null, 2));
+    }
+    return;
+  }
 
   // 2. Normalize
   const normalized = rawIssues.map(raw => plugin.normalize(raw)).filter(Boolean);
@@ -68,7 +109,7 @@ async function fetchCommand(source) {
     }
 
     issue.created_at = issue.created_at || new Date().toISOString();
-    issue.updated_at = new Date().toISOString();
+    issue.updated_at = issue.updated_at || new Date().toISOString();
     issue.status = issue.status || 'open';
   }
 
@@ -139,34 +180,21 @@ async function fetchCommand(source) {
   // 8. Scan history
   insertScanHistory(db, source, rawIssues.length, newIssues.length, reopened);
 
-  // 9. Notification (best-effort)
-  try {
-    const webhookUrl = process.env.NOTIFICATION_WEBHOOK_URL;
-    if (webhookUrl && newIssues.length > 0) {
-      const { sendNotification } = require('../notify');
-      const criticalCount = newIssues.filter(i => i.severity === 'critical').length;
-      const totalOpen = db.prepare(
-        `SELECT COUNT(*) as cnt FROM issues WHERE source = ? AND status = 'open'`
-      ).get(source).cnt;
-
-      await sendNotification({
-        source,
-        new_issues: newIssues.length,
-        total_open: totalOpen,
-        critical_count: criticalCount,
-        timestamp: new Date().toISOString(),
-      });
+  // 9. Summary
+  if (opts.json) {
+    console.log(JSON.stringify({
+      source,
+      found: rawIssues.length,
+      new: newIssues.length,
+      reopened,
+    }));
+  } else {
+    console.log(chalk.green(`\nFetch complete for ${plugin.displayName || source}:`));
+    console.log(`  Found: ${chalk.bold(rawIssues.length)} issues`);
+    console.log(`  New:   ${chalk.bold(newIssues.length)}`);
+    if (reopened > 0) {
+      console.log(`  Reopened: ${chalk.yellow.bold(reopened)}`);
     }
-  } catch (_) {
-    // Notification failure is non-fatal
-  }
-
-  // 10. Summary
-  console.log(chalk.green(`\nFetch complete for ${plugin.displayName || source}:`));
-  console.log(`  Found: ${chalk.bold(rawIssues.length)} issues`);
-  console.log(`  New:   ${chalk.bold(newIssues.length)}`);
-  if (reopened > 0) {
-    console.log(`  Reopened: ${chalk.yellow.bold(reopened)}`);
   }
 }
 

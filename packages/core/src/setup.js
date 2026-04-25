@@ -74,7 +74,14 @@ function initSchema() {
       issue_count INTEGER,
       status TEXT,
       fix_branch TEXT,
-      created_at TEXT
+      created_at TEXT,
+      tier TEXT DEFAULT 'exact'
+    );
+
+    CREATE TABLE IF NOT EXISTS issue_clusters (
+      issue_id TEXT NOT NULL,
+      cluster_id TEXT NOT NULL,
+      PRIMARY KEY (issue_id, cluster_id)
     );
 
     CREATE TABLE IF NOT EXISTS rejection_patterns (
@@ -84,6 +91,7 @@ function initSchema() {
       pattern_tag TEXT,
       description TEXT,
       occurrences INTEGER DEFAULT 0,
+      first_seen_at TEXT,
       last_seen_at TEXT,
       negative_prompt_clause TEXT
     );
@@ -103,7 +111,25 @@ function initSchema() {
       locked_at TEXT,
       expires_at TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS scanner_config (
+      source TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT,
+      PRIMARY KEY (source, key)
+    );
   `);
+
+  // ALTER migrations for pre-existing DBs created before a column existed.
+  const clusterCols = db.prepare("PRAGMA table_info(clusters)").all().map(c => c.name);
+  if (!clusterCols.includes('tier')) {
+    db.exec(`ALTER TABLE clusters ADD COLUMN tier TEXT DEFAULT 'exact'`);
+    // Invalidate old cluster data so tier-aware rebuild can run cleanly.
+    // migrateIssueClusters will repopulate from current plugin clusterKeys.
+    db.exec('DELETE FROM issue_clusters');
+    db.exec('DELETE FROM clusters');
+    db.exec('UPDATE issues SET cluster_id = NULL');
+  }
 
   // Create indexes
   db.exec(`
@@ -115,7 +141,62 @@ function initSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_rejection_patterns_unique
       ON rejection_patterns (source, rule_id, pattern_tag);
     CREATE INDEX IF NOT EXISTS idx_locks_expires_at ON locks (expires_at);
+    CREATE INDEX IF NOT EXISTS idx_issue_clusters_cluster_id ON issue_clusters (cluster_id);
+    CREATE INDEX IF NOT EXISTS idx_issue_clusters_issue_id ON issue_clusters (issue_id);
+    CREATE INDEX IF NOT EXISTS idx_clusters_source_tier ON clusters (source, tier);
   `);
 }
 
-module.exports = { initSchema };
+/**
+ * Backfill the issue_clusters join table from existing cluster_id assignments
+ * and re-cluster all issues to establish proper many-to-many relationships.
+ * Safe to call multiple times (idempotent).
+ */
+function migrateIssueClusters() {
+  const db = getDb();
+
+  // Skip if the join table is already populated — clustering has been done.
+  // We run when join is empty AND there are issues to (re-)cluster.
+  const joinCount = db.prepare('SELECT COUNT(*) as cnt FROM issue_clusters').get().cnt;
+  if (joinCount > 0) return;
+
+  const issueCount = db.prepare('SELECT COUNT(*) as cnt FROM issues WHERE is_duplicate = 0').get().cnt;
+  if (issueCount === 0) return;
+
+  try {
+    const { loadPlugins } = require('./pluginLoader');
+    const { clusterIssues } = require('./clustering');
+    const plugins = loadPlugins();
+
+    const allIssues = db.prepare('SELECT * FROM issues WHERE is_duplicate = 0').all();
+
+    // Hydrate metadata so plugin clusterKeys() can read from issue.metadata
+    const allMeta = db.prepare('SELECT issue_id, key, value FROM issue_metadata').all();
+    const metaMap = new Map();
+    for (const row of allMeta) {
+      if (!metaMap.has(row.issue_id)) metaMap.set(row.issue_id, {});
+      const obj = metaMap.get(row.issue_id);
+      try { obj[row.key] = JSON.parse(row.value); } catch (_) { obj[row.key] = row.value; }
+    }
+
+    const bySource = new Map();
+    for (const issue of allIssues) {
+      issue.metadata = metaMap.get(issue.id) || {};
+      if (!bySource.has(issue.source)) bySource.set(issue.source, []);
+      bySource.get(issue.source).push(issue);
+    }
+
+    for (const [source, issues] of bySource) {
+      const plugin = plugins.get(source);
+      if (!plugin || typeof plugin.clusterKeys !== 'function') continue;
+      clusterIssues(issues, plugin, db);
+    }
+
+    // Drop clusters that still have zero members after rebuild
+    db.exec('DELETE FROM clusters WHERE issue_count = 0');
+  } catch (err) {
+    console.warn(`Warning: cluster rebuild skipped: ${err.message}`);
+  }
+}
+
+module.exports = { initSchema, migrateIssueClusters };

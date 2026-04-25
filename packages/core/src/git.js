@@ -37,7 +37,6 @@ function createFixBranch(issueId) {
 
 function createClusterBranch(clusterId) {
   const branch = `autofix/cluster-${clusterId}`;
-  run(`git checkout -b ${branch}`);
   return branch;
 }
 

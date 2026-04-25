@@ -219,6 +219,18 @@ function getStats(source = null) {
     `).all();
   }
 
+  // Severity breakdown
+  const severityCounts = db.prepare(`
+    SELECT severity, COUNT(*) as count
+    FROM issues ${where}
+    GROUP BY severity
+  `).all(...params);
+
+  const bySeverity = {};
+  for (const row of severityCounts) {
+    bySeverity[row.severity] = row.count;
+  }
+
   return {
     total,
     open: counts.open || 0,
@@ -231,6 +243,7 @@ function getStats(source = null) {
     autoApproved,
     acceptanceRate,
     bySource,
+    by_severity: bySeverity,
   };
 }
 

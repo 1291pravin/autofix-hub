@@ -16,20 +16,25 @@ async function fixNextCommand(source) {
   const db = getDb();
   initSchema();
 
-  // Try cluster first (batch value), then individual issues
+  // Try cluster first (batch value), then individual issues.
+  // Prefer `exact` clusters (a true fix unit) over `tight` (a review family),
+  // then break ties by issue_count.
   const cluster = db.prepare(`
-    SELECT c.id, c.cluster_key, c.issue_count, c.source
+    SELECT c.id, c.cluster_key, c.issue_count, c.source, c.tier
     FROM clusters c
     WHERE c.source = ? AND c.status = 'open'
-    ORDER BY c.issue_count DESC
+    ORDER BY
+      CASE c.tier WHEN 'exact' THEN 2 WHEN 'tight' THEN 1 ELSE 0 END DESC,
+      c.issue_count DESC
     LIMIT 1
   `).get(source);
 
   if (cluster) {
     const clusterIssues = db.prepare(`
-      SELECT * FROM issues
-      WHERE cluster_id = ? AND status = 'open' AND is_duplicate = 0
-      ORDER BY impact_score DESC
+      SELECT i.* FROM issues i
+      INNER JOIN issue_clusters ic ON ic.issue_id = i.id
+      WHERE ic.cluster_id = ? AND i.status = 'open' AND i.is_duplicate = 0
+      ORDER BY i.impact_score DESC
     `).all(cluster.id);
 
     if (clusterIssues.length > 0) {
@@ -105,9 +110,10 @@ async function fixClusterCommand(source, clusterId) {
   }
 
   const clusterIssues = db.prepare(`
-    SELECT * FROM issues
-    WHERE cluster_id = ? AND status = 'open' AND is_duplicate = 0
-    ORDER BY impact_score DESC
+    SELECT i.* FROM issues i
+    INNER JOIN issue_clusters ic ON ic.issue_id = i.id
+    WHERE ic.cluster_id = ? AND i.status = 'open' AND i.is_duplicate = 0
+    ORDER BY i.impact_score DESC
   `).all(clusterId);
 
   if (clusterIssues.length === 0) {

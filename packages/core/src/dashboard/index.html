@@ -4,286 +4,1103 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>autofix-hub Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script crossorigin src="https://unpkg.com/marked@12/marked.min.js"></script>
 <style>
 :root {
-  --bg: #0f1117;
-  --bg-card: #1a1d27;
-  --bg-hover: #222633;
-  --border: #2a2e3d;
-  --text: #e1e4ed;
-  --text-muted: #8b90a0;
+  --bg: #0a0c10;
+  --bg-surface: #12141a;
+  --bg-card: #181b24;
+  --bg-card-hover: #1e2230;
+  --bg-input: #0f1117;
+  --border: #252a3a;
+  --border-hover: #363d52;
+  --text: #e4e7f0;
+  --text-secondary: #9ba1b7;
+  --text-muted: #6b7190;
   --accent: #6c7bff;
   --accent-hover: #8b97ff;
+  --accent-glow: rgba(108, 123, 255, 0.15);
+  --accent-subtle: rgba(108, 123, 255, 0.08);
   --critical: #ff4d6a;
+  --critical-bg: rgba(255, 77, 106, 0.12);
   --high: #ff8c42;
+  --high-bg: rgba(255, 140, 66, 0.12);
   --medium: #ffc53d;
+  --medium-bg: rgba(255, 197, 61, 0.12);
   --low: #4dabf7;
-  --info: #868e96;
-  --success: #51cf66;
+  --low-bg: rgba(77, 171, 247, 0.12);
+  --info: #6b7190;
+  --info-bg: rgba(107, 113, 144, 0.12);
+  --success: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.12);
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --radius: 8px;
-  --radius-sm: 4px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --sidebar-width: 240px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --transition: 0.2s ease;
 }
 
 [data-theme="light"] {
-  --bg: #f4f5f9;
+  --bg: #f0f2f7;
+  --bg-surface: #f8f9fc;
   --bg-card: #ffffff;
-  --bg-hover: #f0f1f5;
-  --border: #e0e2ea;
-  --text: #1a1d27;
-  --text-muted: #6b7080;
+  --bg-card-hover: #f5f6fa;
+  --bg-input: #f0f2f7;
+  --border: #e2e5ef;
+  --border-hover: #cbd0e0;
+  --text: #1a1d2e;
+  --text-secondary: #5a6080;
+  --text-muted: #8890a8;
+  --accent-glow: rgba(108, 123, 255, 0.08);
+  --accent-subtle: rgba(108, 123, 255, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
 }
 
-.app { max-width: 1400px; margin: 0 auto; padding: 16px 24px; }
+/* ─── Layout ──────────────────────────────────────── */
+.app-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  min-height: 100vh;
+}
 
-/* Header */
-.header {
+/* ─── Sidebar ─────────────────────────────────────── */
+.sidebar {
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  z-index: 50;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-logo {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-logo .logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-logo .logo-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: white;
+  fill: none;
+  stroke-width: 2;
+}
+
+.sidebar-logo span { color: var(--accent); }
+
+.sidebar-version {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 8px;
+  overflow-y: auto;
+}
+
+.nav-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  padding: 12px 12px 6px;
+  font-weight: 600;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+  position: relative;
+}
+
+.nav-item:hover {
+  background: var(--accent-subtle);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 3px 3px 0;
+}
+
+.nav-item svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.nav-item .nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--accent);
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+}
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.scanner-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.scanner-status-row .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.ok { background: var(--success); }
+.status-dot.stale { background: var(--medium); }
+.status-dot.none { background: var(--info); }
+
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  transition: all var(--transition);
+  margin-top: 8px;
+}
+.theme-toggle-btn:hover { border-color: var(--border-hover); color: var(--text); }
+.theme-toggle-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* ─── Main Content ────────────────────────────────── */
+.main-content {
+  grid-column: 2;
+  padding: 24px 32px;
+  min-height: 100vh;
+  max-width: 1280px;
+}
+
+.page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
-.header-left { display: flex; align-items: center; gap: 16px; }
-.header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-.header h1 span { color: var(--accent); }
-.last-scans { display: flex; gap: 12px; }
-.last-scan { font-size: 11px; color: var(--text-muted); }
-.last-scan .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
-.last-scan .dot.ok { background: var(--success); }
-.last-scan .dot.stale { background: var(--medium); }
-.last-scan .dot.none { background: var(--info); }
-.header-actions { display: flex; gap: 8px; align-items: center; }
 
-/* Buttons */
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.page-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ─── Buttons ─────────────────────────────────────── */
 .btn {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 6px 14px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-card);
   color: var(--text);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
-.btn:hover { background: var(--bg-hover); border-color: var(--accent); }
+.btn:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
 .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-sm { padding: 3px 8px; font-size: 11px; }
-.btn-danger { color: var(--critical); border-color: var(--critical); }
-.btn-danger:hover { background: rgba(255,77,106,0.1); }
-.btn-success { color: var(--success); border-color: var(--success); }
-.btn-success:hover { background: rgba(81,207,102,0.1); }
-.theme-toggle { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-danger { color: var(--critical); border-color: rgba(255,77,106,0.3); }
+.btn-danger:hover { background: var(--critical-bg); border-color: var(--critical); }
+.btn-success { color: var(--success); border-color: rgba(52,211,153,0.3); }
+.btn-success:hover { background: var(--success-bg); border-color: var(--success); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--accent-subtle); }
+.btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 
-/* Tabs */
-.tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-.tab {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 8px 16px;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
-}
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-/* Summary Cards */
-.summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+/* ─── Cards ───────────────────────────────────────── */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
+  transition: all var(--transition);
 }
-.card-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.card-value { font-size: 28px; font-weight: 700; margin-top: 4px; }
-.card-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.card:hover { border-color: var(--border-hover); }
+.card-clickable { cursor: pointer; }
+.card-clickable:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); transform: translateY(-1px); }
 
-/* Table */
-.table-wrap { overflow-x: auto; }
+/* ─── Stat Cards ──────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+.stat-card.accent::before { background: var(--accent); }
+.stat-card.critical::before { background: var(--critical); }
+.stat-card.success::before { background: var(--success); }
+.stat-card.warning::before { background: var(--medium); }
+.stat-card.info::before { background: var(--low); }
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 30px;
+  font-weight: 800;
+  margin-top: 4px;
+  letter-spacing: -1px;
+  font-family: var(--font-sans);
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ─── Badges ──────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+  letter-spacing: 0.2px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.badge-critical { background: var(--critical-bg); color: var(--critical); }
+.badge-high { background: var(--high-bg); color: var(--high); }
+.badge-medium { background: var(--medium-bg); color: var(--medium); }
+.badge-low { background: var(--low-bg); color: var(--low); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.badge-open { background: var(--low-bg); color: var(--low); }
+.badge-in_progress { background: var(--medium-bg); color: var(--medium); }
+.badge-ai_fixed { background: var(--accent-glow); color: var(--accent); }
+.badge-verified { background: var(--success-bg); color: var(--success); }
+.badge-merged { background: rgba(52,211,153,0.2); color: var(--success); }
+.badge-closed { background: var(--info-bg); color: var(--info); }
+.badge-rejected { background: var(--critical-bg); color: var(--critical); }
+.badge-trivial { background: var(--success-bg); color: var(--success); }
+.badge-small { background: var(--low-bg); color: var(--low); }
+.badge-large { background: var(--critical-bg); color: var(--critical); }
+.badge-source { background: var(--accent-subtle); color: var(--accent); }
+
+/* ─── Tables ──────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-card); }
 table { width: 100%; border-collapse: collapse; }
 thead th {
   text-align: left;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--text-muted);
-  padding: 8px 10px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-}
-thead th:hover { color: var(--text); }
-thead th .sort-arrow { margin-left: 4px; font-size: 10px; }
-tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-tbody tr:hover { background: var(--bg-hover); }
-tbody td { padding: 8px 10px; vertical-align: middle; white-space: nowrap; }
-td.desc { white-space: normal; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
-
-/* Badges */
-.badge {
-  display: inline-block;
-  font-size: 10px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  background: var(--bg-surface);
+  position: sticky;
+  top: 0;
 }
-.badge-critical { background: rgba(255,77,106,0.15); color: var(--critical); }
-.badge-high { background: rgba(255,140,66,0.15); color: var(--high); }
-.badge-medium { background: rgba(255,197,61,0.15); color: var(--medium); }
-.badge-low { background: rgba(77,171,247,0.15); color: var(--low); }
-.badge-info { background: rgba(134,142,150,0.15); color: var(--info); }
+thead th:first-child { border-radius: var(--radius) 0 0 0; }
+thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+thead th:hover { color: var(--text-secondary); }
+thead th .sort-arrow { margin-left: 4px; font-size: 10px; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg-card-hover); }
+tbody td { padding: 10px 14px; vertical-align: middle; white-space: nowrap; font-size: 13px; }
+td.desc { white-space: normal; max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
 
-.badge-open { background: rgba(77,171,247,0.15); color: var(--low); }
-.badge-in_progress { background: rgba(255,197,61,0.15); color: var(--medium); }
-.badge-ai_fixed { background: rgba(108,123,255,0.15); color: var(--accent); }
-.badge-verified { background: rgba(81,207,102,0.15); color: var(--success); }
-.badge-merged { background: rgba(81,207,102,0.25); color: var(--success); }
-.badge-closed { background: rgba(134,142,150,0.15); color: var(--info); }
-.badge-rejected { background: rgba(255,77,106,0.15); color: var(--critical); }
+/* ─── Filter Pills ────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 
-.badge-trivial { background: rgba(81,207,102,0.15); color: var(--success); }
-.badge-small { background: rgba(77,171,247,0.15); color: var(--low); }
-.badge-large { background: rgba(255,77,106,0.15); color: var(--critical); }
+.filter-bar select {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7190' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+}
+.filter-bar select:hover { border-color: var(--border-hover); }
+.filter-bar .filter-count { margin-left: auto; font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
 
-.badge-source { background: rgba(108,123,255,0.1); color: var(--accent); font-size: 10px; }
-
-/* Cluster */
-.cluster-icon { font-size: 12px; color: var(--text-muted); margin-right: 2px; }
-
-/* Pagination */
-.pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+/* ─── Pagination ──────────────────────────────────── */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
 .pagination-btns { display: flex; gap: 4px; }
 
-/* Actions */
-.actions { display: flex; gap: 4px; flex-wrap: nowrap; }
-
-/* Reject modal */
+/* ─── Modal ───────────────────────────────────────── */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+  animation: fadeIn 0.15s ease;
 }
 .modal {
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 24px; min-width: 360px; max-width: 480px;
+  border-radius: var(--radius-lg); padding: 28px; min-width: 380px; max-width: 500px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.2s ease;
 }
-.modal h3 { margin-bottom: 12px; font-size: 14px; }
-.modal label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; margin-top: 10px; }
+.modal h3 { margin-bottom: 16px; font-size: 16px; font-weight: 700; }
+.modal label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; margin-top: 12px; font-weight: 500; }
 .modal select, .modal textarea, .modal input {
-  width: 100%; font-family: var(--font-mono); font-size: 12px;
-  padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
+  width: 100%; font-family: var(--font-sans); font-size: 13px;
+  padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border);
   border-radius: var(--radius-sm); color: var(--text); resize: vertical;
+  transition: border-color var(--transition);
 }
-.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.modal select:focus, .modal textarea:focus, .modal input:focus {
+  outline: none; border-color: var(--accent);
+}
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
 
-/* Metrics */
-.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
-.metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-.metric-card h3 { font-size: 13px; margin-bottom: 12px; font-weight: 600; }
-.metric-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
-.metric-bar-label { min-width: 100px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-.metric-bar-track { flex: 1; height: 16px; background: var(--bg); border-radius: 3px; overflow: hidden; }
-.metric-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
-.metric-bar-value { min-width: 50px; text-align: right; }
-.metric-table { width: 100%; font-size: 12px; }
-.metric-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Settings */
-.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-.scanner-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-.scanner-card h3 { font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-.status-dot.green { background: var(--success); }
-.status-dot.red { background: var(--critical); }
-.status-dot.gray { background: var(--info); }
-.scanner-detail { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
-.setting-row { margin-top: 12px; }
-.setting-row label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px; }
-.setting-row input, .setting-row select {
-  width: 100%; font-family: var(--font-mono); font-size: 12px;
-  padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); color: var(--text);
-}
-.toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-.toggle { position: relative; width: 36px; height: 20px; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.toggle-slider {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--border); border-radius: 10px; cursor: pointer; transition: 0.2s;
-}
-.toggle-slider:before {
-  content: ''; position: absolute; width: 14px; height: 14px;
-  left: 3px; bottom: 3px; background: var(--text); border-radius: 50%; transition: 0.2s;
-}
-.toggle input:checked + .toggle-slider { background: var(--accent); }
-.toggle input:checked + .toggle-slider:before { transform: translateX(16px); }
-
-/* Detail panel */
+/* ─── Detail Panel ────────────────────────────────── */
 .detail-panel {
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+  border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+  animation: slideUp 0.2s ease;
 }
-.detail-panel h3 { font-size: 14px; margin-bottom: 12px; }
-.detail-row { display: flex; gap: 12px; margin-bottom: 6px; font-size: 12px; }
-.detail-key { min-width: 120px; color: var(--text-muted); }
+.detail-panel h3 { font-size: 16px; margin-bottom: 16px; font-weight: 700; }
+.detail-row { display: flex; gap: 12px; margin-bottom: 8px; font-size: 13px; align-items: baseline; }
+.detail-key { min-width: 130px; color: var(--text-muted); font-weight: 500; flex-shrink: 0; }
 .detail-value { flex: 1; word-break: break-all; }
 .prompt-box {
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 12px; font-size: 12px; white-space: pre-wrap; margin-top: 8px; max-height: 300px;
-  overflow-y: auto;
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px; font-size: 12px; font-family: var(--font-mono); white-space: pre-wrap;
+  margin-top: 8px; max-height: 300px; overflow-y: auto; line-height: 1.5;
 }
 
-/* Loading */
-.loading { text-align: center; padding: 40px; color: var(--text-muted); }
-.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* ─── Full-page Issue Detail ─────────────────────── */
+.issue-detail-page {
+  max-width: 960px;
+}
+.issue-detail-page .detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.issue-detail-page .detail-section-full {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.issue-detail-page .prompt-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.issue-detail-page .prompt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.issue-detail-page .prompt-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.prompt-rendered {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px 24px;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.prompt-rendered h1, .prompt-rendered h2, .prompt-rendered h3,
+.prompt-rendered h4, .prompt-rendered h5, .prompt-rendered h6 {
+  color: var(--text);
+  margin: 16px 0 8px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.prompt-rendered h1 { font-size: 20px; }
+.prompt-rendered h2 { font-size: 17px; }
+.prompt-rendered h3 { font-size: 15px; }
+.prompt-rendered p { margin: 8px 0; }
+.prompt-rendered ul, .prompt-rendered ol { margin: 8px 0; padding-left: 24px; }
+.prompt-rendered li { margin: 4px 0; }
+.prompt-rendered code {
+  background: rgba(108, 123, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.prompt-rendered pre {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.prompt-rendered pre code {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.prompt-rendered blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+  margin: 12px 0;
+  color: var(--text-secondary);
+}
+.prompt-rendered table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.prompt-rendered table th,
+.prompt-rendered table td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.prompt-rendered table th {
+  background: var(--bg-surface);
+  font-weight: 600;
+}
+.btn-copy-lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
 
-/* Toast */
-.toast-container { position: fixed; top: 16px; right: 16px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+/* ─── Metrics ─────────────────────────────────────── */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+.metric-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.metric-card h3 { font-size: 14px; margin-bottom: 14px; font-weight: 600; color: var(--text); }
+.metric-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
+.metric-bar-label { min-width: 110px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-family: var(--font-mono); font-size: 11px; }
+.metric-bar-track { flex: 1; height: 20px; background: var(--bg-input); border-radius: var(--radius-sm); overflow: hidden; }
+.metric-bar-fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.4s ease; }
+.metric-bar-value { min-width: 50px; text-align: right; font-family: var(--font-mono); font-weight: 600; }
+.metric-table { width: 100%; font-size: 13px; }
+.metric-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.metric-table tr:last-child td { border-bottom: none; }
+
+/* ─── Cluster Cards ───────────────────────────────── */
+.cluster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.cluster-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+}
+.cluster-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.cluster-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cluster-card-key {
+  font-weight: 700;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.cluster-card-count {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.cluster-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cluster-card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cluster-card-meta-row svg {
+  width: 13px;
+  height: 13px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.cluster-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.cluster-detail-info h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.cluster-detail-meta {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.cluster-detail-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cluster-detail-meta-item svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 2;
+}
+
+/* ─── Settings ────────────────────────────────────── */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.scanner-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.scanner-card h3 { font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.scanner-card .s-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.s-dot.green { background: var(--success); }
+.s-dot.red { background: var(--critical); }
+.s-dot.gray { background: var(--info); }
+.scanner-detail { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-family: var(--font-mono); }
+
+/* ─── Settings Sections ──────────────────────────── */
+.settings-section {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+}
+.settings-section-title {
+  font-size: 16px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+.settings-section-title svg {
+  width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0;
+}
+.settings-section-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+.env-group-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted); font-weight: 600; margin: 20px 0 10px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.env-group-title:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
+.env-field { margin-bottom: 14px; }
+.env-field label {
+  display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 4px; font-family: var(--font-mono);
+}
+.env-field .env-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.env-field input, .env-field select {
+  width: 100%; font-family: var(--font-mono); font-size: 13px;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-input); color: var(--text); transition: all var(--transition);
+}
+.env-field input:focus, .env-field select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.env-field .toggle-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.toggle-switch {
+  position: relative; width: 40px; height: 22px; cursor: pointer;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--border); border-radius: 11px; transition: all var(--transition);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); }
+.toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; transition: all var(--transition);
+}
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+.toggle-label { font-size: 13px; color: var(--text-secondary); }
+.settings-actions { display: flex; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.scanner-setup-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+}
+.scanner-setup-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.scanner-setup-header h3 {
+  font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+}
+.scanner-status-badges { display: flex; gap: 8px; }
+.status-badge {
+  font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 12px; font-family: var(--font-mono);
+}
+.status-badge.ok { background: var(--success-bg); color: var(--success); }
+.status-badge.err { background: var(--critical-bg); color: var(--critical); }
+.status-badge.pending { background: var(--medium-bg); color: var(--medium); }
+.status-badge.running { background: var(--low-bg); color: var(--low); }
+.scanner-cred-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.scanner-cred-form .env-field { margin-bottom: 0; }
+.scanner-install-bar {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: var(--bg-input); border-radius: var(--radius-sm); margin-bottom: 16px;
+  font-size: 13px;
+}
+.scanner-install-bar .install-status { flex: 1; color: var(--text-secondary); }
+.log-output {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 14px; margin-top: 10px; max-height: 120px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-all;
+}
+
+/* ─── Overview Sections ───────────────────────────── */
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+  align-items: start;
+}
+
+.overview-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.overview-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overview-section h3 svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 2;
+}
+
+.severity-bar {
+  display: flex;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.severity-bar-segment {
+  transition: width 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  min-width: 2px;
+}
+
+.severity-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.severity-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.severity-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.activity-item:last-child { border-bottom: none; }
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cluster-mini-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.cluster-mini-card:last-child { border-bottom: none; }
+.cluster-mini-card:hover { color: var(--accent); }
+
+.scan-history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.scan-history-item:last-child { border-bottom: none; }
+
+/* ─── Loading & Empty ─────────────────────────────── */
+.loading { text-align: center; padding: 48px; color: var(--text-muted); }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 2.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty h3 { font-size: 16px; margin-bottom: 6px; color: var(--text-secondary); font-weight: 600; }
+.empty p { font-size: 13px; }
+
+/* ─── Toast ───────────────────────────────────────── */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
 .toast {
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 10px 16px; font-size: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3); animation: slideIn 0.2s ease;
+  border-radius: var(--radius); padding: 12px 18px; font-size: 13px;
+  box-shadow: var(--shadow-lg); animation: slideIn 0.25s ease;
+  display: flex; align-items: center; gap: 8px;
 }
-.toast.error { border-color: var(--critical); }
-.toast.success { border-color: var(--success); }
+.toast.error { border-left: 3px solid var(--critical); }
+.toast.success { border-left: 3px solid var(--success); }
+.toast.info { border-left: 3px solid var(--accent); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* Empty state */
-.empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
+/* ─── Mobile Responsive ───────────────────────────── */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 40;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.mobile-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 4px;
+}
+.mobile-menu-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 45;
+}
+
+@media (max-width: 768px) {
+  .app-layout { grid-template-columns: 1fr; }
+  .main-content { grid-column: 1; padding: 72px 16px 24px; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .mobile-header { display: flex; }
+  .overview-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .cluster-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
-// ─── API helpers ────────────────────────────────────────────
+// ─── Icons (inline SVG paths) ──────────────────────────────
+const Icons = {
+  home: <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  list: <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+  layers: <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+  chart: <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  settings: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  sun: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  moon: <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  menu: <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+  arrowLeft: <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
+  clock: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  gitBranch: <svg viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>,
+  folder: <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>,
+  zap: <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  shield: <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  activity: <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+  copy: <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+  x: <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  check: <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>,
+  alertTriangle: <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  eye: <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  terminal: <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>,
+};
+
+const buildFixCommand = (source, type, id) => {
+  if (type === 'cluster') return `/autofix ${source} fix-cluster ${id}`;
+  return `/autofix ${source} fix ${id}`;
+};
+
+// ─── Hash Router ───────────────────────────────────────────
+function useHashRoute() {
+  const [hash, setHash] = useState(window.location.hash || '#/');
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash || '#/');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  return hash;
+}
+
+function navigate(path) {
+  window.location.hash = path;
+}
+
+// ─── API helpers ───────────────────────────────────────────
 async function api(path, opts = {}) {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -295,7 +1112,7 @@ async function api(path, opts = {}) {
   return data;
 }
 
-// ─── Toast ──────────────────────────────────────────────────
+// ─── Toast ─────────────────────────────────────────────────
 function ToastContainer({ toasts }) {
   return (
     <div className="toast-container">
@@ -304,46 +1121,13 @@ function ToastContainer({ toasts }) {
   );
 }
 
-// ─── Severity / Status / Effort badges ──────────────────────
+// ─── Badge ─────────────────────────────────────────────────
 function Badge({ type, value }) {
   if (!value) return null;
   return <span className={`badge badge-${value}`}>{value.replace(/_/g, ' ')}</span>;
 }
 
-// ─── Summary Cards ──────────────────────────────────────────
-function SummaryCards({ stats }) {
-  if (!stats) return null;
-  return (
-    <div className="summary-cards">
-      <div className="card">
-        <div className="card-label">Open Issues</div>
-        <div className="card-value">{stats.open || 0}</div>
-        <div className="card-sub">{stats.by_source ? Object.entries(stats.by_source).map(([s,c]) => `${s}: ${c.open || 0}`).join(' / ') : ''}</div>
-      </div>
-      <div className="card">
-        <div className="card-label">AI Fixed</div>
-        <div className="card-value" style={{color:'var(--accent)'}}>{stats.ai_fixed || 0}</div>
-        <div className="card-sub">awaiting review</div>
-      </div>
-      <div className="card">
-        <div className="card-label">Verified</div>
-        <div className="card-value" style={{color:'var(--success)'}}>{stats.verified || 0}</div>
-        <div className="card-sub">ready to merge</div>
-      </div>
-      <div className="card">
-        <div className="card-label">Acceptance Rate</div>
-        <div className="card-value">{stats.total_ai_fixed > 0 ? Math.round((stats.verified + (stats.merged || 0)) / stats.total_ai_fixed * 100) : '—'}%</div>
-        <div className="card-sub">{stats.total_ai_fixed || 0} total attempts</div>
-      </div>
-      <div className="card">
-        <div className="card-label">Auto-Approved</div>
-        <div className="card-value">{stats.auto_approved || 0}</div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Reject Modal ───────────────────────────────────────────
+// ─── Reject Modal ──────────────────────────────────────────
 const REJECTION_TAGS = ['wrong_scope','broke_tests','style_mismatch','incomplete_fix','wrong_approach','other'];
 
 function RejectModal({ issueId, onClose, onReject }) {
@@ -368,54 +1152,144 @@ function RejectModal({ issueId, onClose, onReject }) {
   );
 }
 
-// ─── Issue Detail Panel ─────────────────────────────────────
-function IssueDetail({ issue, onClose, onStatusChange, addToast }) {
-  if (!issue) return null;
-  const copyPrompt = () => {
-    navigator.clipboard.writeText(issue.fix_prompt || '').then(() => addToast('Prompt copied', 'success'));
+// ─── Issue Detail Full Page ────────────────────────────────
+function IssueDetailPage({ issueId, addToast }) {
+  const [issue, setIssue] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [rejectId, setRejectId] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const fetchIssue = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api(`/issues/${issueId}`);
+      setIssue(data.issue);
+    } catch (e) { addToast(e.message, 'error'); }
+    setLoading(false);
+  }, [issueId]);
+
+  useEffect(() => { fetchIssue(); }, [fetchIssue]);
+
+  const changeStatus = async (id, status, extra = {}) => {
+    try {
+      await api(`/issues/${id}/status`, { method: 'POST', body: { status, ...extra } });
+      addToast(`${id} \u2192 ${status}`, 'success');
+      fetchIssue();
+    } catch (e) { addToast(e.message, 'error'); }
   };
+
+  const handleReject = async (tag, reason) => {
+    await changeStatus(rejectId, 'rejected', { rejection_tag: tag, rejected_reason: reason });
+    setRejectId(null);
+  };
+
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(issue.fix_prompt || '').then(() => {
+      setCopied(true);
+      addToast('Prompt copied to clipboard', 'success');
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const renderMarkdown = (text) => {
+    if (!text) return '';
+    try {
+      return marked.parse(text, { breaks: true });
+    } catch (e) {
+      return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
+    }
+  };
+
+  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  if (!issue) return <div className="empty"><h3>Issue not found</h3><p>The issue "{issueId}" could not be loaded.</p></div>;
+
   return (
-    <div className="detail-panel">
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <h3>{issue.id}</h3>
-        <button className="btn btn-sm" onClick={onClose}>Close</button>
+    <div className="issue-detail-page">
+      <button className="btn btn-ghost" style={{marginBottom:16}} onClick={() => window.history.back()}>
+        {Icons.arrowLeft} Back
+      </button>
+
+      <div className="page-header" style={{marginBottom:20}}>
+        <div>
+          <h1 className="page-title" style={{fontFamily:'var(--font-mono)', fontSize:18}}>{issue.id}</h1>
+          <p className="page-subtitle">{issue.description || 'Issue details'}</p>
+        </div>
+        <div style={{display:'flex', gap:8, alignItems:'center'}}>
+          {(issue.status === 'ai_fixed' || issue.status === 'verified') && (
+            <button className="btn btn-success" onClick={() => changeStatus(issue.id, issue.status === 'ai_fixed' ? 'verified' : 'merged')}>
+              {issue.status === 'ai_fixed' ? 'Approve' : 'Merge'}
+            </button>
+          )}
+          {(issue.status === 'ai_fixed' || issue.status === 'in_progress') && (
+            <button className="btn btn-danger" onClick={() => setRejectId(issue.id)}>Reject</button>
+          )}
+          {issue.status === 'open' && (
+            <button className="btn" style={{color:'var(--warning)'}} onClick={() => {
+              navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)).then(() => {
+                addToast('Fix command copied to clipboard', 'success');
+              });
+            }}>
+              {Icons.terminal} Fix Command
+            </button>
+          )}
+        </div>
       </div>
-      <div style={{marginTop:12}}>
+
+      {rejectId && <RejectModal issueId={rejectId} onClose={() => setRejectId(null)} onReject={handleReject} />}
+
+      <div className="detail-grid">
         <div className="detail-row"><span className="detail-key">Source</span><span className="detail-value"><Badge type="source" value={issue.source} /></span></div>
         <div className="detail-row"><span className="detail-key">Severity</span><span className="detail-value"><Badge type="severity" value={issue.severity} /></span></div>
         <div className="detail-row"><span className="detail-key">Status</span><span className="detail-value"><Badge type="status" value={issue.status} /></span></div>
-        <div className="detail-row"><span className="detail-key">Impact Score</span><span className="detail-value">{issue.impact_score ?? '—'}</span></div>
+        <div className="detail-row"><span className="detail-key">Impact Score</span><span className="detail-value" style={{fontWeight:700}}>{issue.impact_score ?? '\u2014'}</span></div>
         <div className="detail-row"><span className="detail-key">Effort</span><span className="detail-value"><Badge type="effort" value={issue.estimated_effort} /> ({issue.estimated_minutes || '?'} min)</span></div>
-        <div className="detail-row"><span className="detail-key">Review Level</span><span className="detail-value">{issue.review_level || '—'}</span></div>
-        <div className="detail-row"><span className="detail-key">Rule</span><span className="detail-value">{issue.rule_id || '—'}</span></div>
-        <div className="detail-row"><span className="detail-key">File</span><span className="detail-value">{issue.file_path || '—'}{issue.line_number ? `:${issue.line_number}` : ''}</span></div>
-        <div className="detail-row"><span className="detail-key">Category</span><span className="detail-value">{issue.category || '—'}</span></div>
-        <div className="detail-row"><span className="detail-key">Cluster</span><span className="detail-value">{issue.cluster_id || 'None'}</span></div>
-        <div className="detail-row"><span className="detail-key">Description</span><span className="detail-value">{issue.description || '—'}</span></div>
-        <div className="detail-row"><span className="detail-key">Created</span><span className="detail-value">{issue.created_at || '—'}</span></div>
-        {issue.resolved_at && <div className="detail-row"><span className="detail-key">Resolved</span><span className="detail-value">{issue.resolved_at}</span></div>}
-        {issue.reviewed_by && <div className="detail-row"><span className="detail-key">Reviewed By</span><span className="detail-value">{issue.reviewed_by}</span></div>}
-        {issue.rejected_reason && <div className="detail-row"><span className="detail-key">Rejection</span><span className="detail-value">{issue.rejected_reason}</span></div>}
+        <div className="detail-row"><span className="detail-key">Review Level</span><span className="detail-value">{issue.review_level || '\u2014'}</span></div>
+        <div className="detail-row"><span className="detail-key">Rule</span><span className="detail-value" style={{fontFamily:'var(--font-mono)', fontSize:12}}>{issue.rule_id || '\u2014'}</span></div>
+        <div className="detail-row"><span className="detail-key">File</span><span className="detail-value" style={{fontFamily:'var(--font-mono)', fontSize:12}}>{issue.file_path || '\u2014'}{issue.line_number ? `:${issue.line_number}` : ''}</span></div>
+        <div className="detail-row"><span className="detail-key">Category</span><span className="detail-value">{issue.category || '\u2014'}</span></div>
+        <div className="detail-row"><span className="detail-key">Cluster</span><span className="detail-value">{issue.cluster_id ? <span style={{color:'var(--accent)', cursor:'pointer'}} onClick={() => navigate(`#/clusters/${issue.cluster_id}`)}>{issue.cluster_id}</span> : 'None'}</span></div>
+        <div className="detail-section-full">
+          <div className="detail-row"><span className="detail-key">Description</span><span className="detail-value">{issue.description || '\u2014'}</span></div>
+          <div className="detail-row"><span className="detail-key">Created</span><span className="detail-value">{issue.created_at || '\u2014'}</span></div>
+          {issue.resolved_at && <div className="detail-row"><span className="detail-key">Resolved</span><span className="detail-value">{issue.resolved_at}</span></div>}
+          {issue.reviewed_by && <div className="detail-row"><span className="detail-key">Reviewed By</span><span className="detail-value">{issue.reviewed_by}</span></div>}
+          {issue.rejected_reason && <div className="detail-row"><span className="detail-key">Rejection</span><span className="detail-value" style={{color:'var(--critical)'}}>{issue.rejected_reason}</span></div>}
+        </div>
       </div>
+
       {issue.fix_prompt && (
-        <div>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12}}>
-            <span className="card-label">Fix Prompt</span>
-            <button className="btn btn-sm" onClick={copyPrompt}>Copy</button>
+        <div className="prompt-section">
+          <div className="prompt-header">
+            <h3>Fix Prompt</h3>
+            <div style={{display:'flex', gap:8}}>
+              <button className={`btn btn-copy-lg ${copied ? 'btn-success' : ''}`} onClick={copyPrompt}>
+                {Icons.copy} {copied ? 'Copied!' : 'Copy Prompt'}
+              </button>
+              {issue.status === 'open' && (
+                <button className="btn btn-copy-lg" style={{color:'var(--warning)'}} onClick={() => {
+                  navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)).then(() => {
+                    addToast('Fix command copied to clipboard', 'success');
+                  });
+                }}>
+                  {Icons.terminal} Copy Fix Command
+                </button>
+              )}
+            </div>
           </div>
-          <div className="prompt-box">{issue.fix_prompt}</div>
+          <div className="prompt-rendered" dangerouslySetInnerHTML={{__html: renderMarkdown(issue.fix_prompt)}} />
         </div>
       )}
+
       {issue.fix_attempts && issue.fix_attempts.length > 0 && (
-        <div style={{marginTop:12}}>
-          <span className="card-label">Fix Attempts ({issue.fix_attempts.length})</span>
-          <table className="metric-table" style={{marginTop:6}}>
+        <div style={{background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:24}}>
+          <h3 style={{fontSize:15, fontWeight:700, marginBottom:14}}>Fix Attempts ({issue.fix_attempts.length})</h3>
+          <table className="metric-table">
             <tbody>
               {issue.fix_attempts.map((a,i) => (
                 <tr key={i}>
-                  <td>{a.attempted_at}</td>
+                  <td style={{color:'var(--text-muted)', fontFamily:'var(--font-mono)', fontSize:12}}>{a.attempted_at}</td>
                   <td><Badge type="status" value={a.success ? 'verified' : 'rejected'} /></td>
-                  <td>{a.tool_used || '—'}</td>
+                  <td style={{color:'var(--text-muted)'}}>{a.tool_used || '\u2014'}</td>
                 </tr>
               ))}
             </tbody>
@@ -426,8 +1300,67 @@ function IssueDetail({ issue, onClose, onStatusChange, addToast }) {
   );
 }
 
-// ─── Issues Tab ─────────────────────────────────────────────
-function IssuesTab({ sourceFilter, addToast }) {
+// ─── Issues Table (shared) ─────────────────────────────────
+function IssuesTable({ issues, loading, onViewDetail, onChangeStatus, onReject, onCopyPrompt, onCopyFixCommand }) {
+  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  if (issues.length === 0) return <div className="empty"><h3>No issues found</h3><p>Run a fetch command to populate issues.</p></div>;
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Impact</th>
+          <th>Effort</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Review</th>
+          <th>Cluster</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {issues.map(issue => (
+          <tr key={issue.id}>
+            <td><Badge type="source" value={issue.source} /></td>
+            <td style={{cursor:'pointer', color:'var(--accent)', fontFamily:'var(--font-mono)', fontSize:12}} onClick={() => onViewDetail(issue.id)}>{issue.id}</td>
+            <td><Badge type="severity" value={issue.severity} /></td>
+            <td style={{fontFamily:'var(--font-mono)', fontWeight:600}}>{issue.impact_score != null ? Number(issue.impact_score).toFixed(1) : '\u2014'}</td>
+            <td><Badge type="effort" value={issue.estimated_effort} /></td>
+            <td className="desc" title={issue.description}>{(issue.description || '').slice(0, 80)}{(issue.description || '').length > 80 ? '...' : ''}</td>
+            <td><Badge type="status" value={issue.status} /></td>
+            <td style={{fontSize:12, color:'var(--text-muted)'}}>{issue.review_level || '\u2014'}</td>
+            <td>{issue.cluster_id ? <span style={{color:'var(--accent)', cursor:'pointer', fontFamily:'var(--font-mono)', fontSize:11}} onClick={() => navigate(`#/clusters/${issue.cluster_id}`)}>{issue.cluster_id.slice(0,8)}</span> : ''}</td>
+            <td>
+              <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
+                <button className="btn btn-sm btn-ghost" onClick={() => onViewDetail(issue.id)} title="View">{Icons.eye}</button>
+                {(issue.status === 'ai_fixed' || issue.status === 'verified') && (
+                  <button className="btn btn-sm btn-success" onClick={() => onChangeStatus(issue.id, issue.status === 'ai_fixed' ? 'verified' : 'merged')}>
+                    {issue.status === 'ai_fixed' ? 'Approve' : 'Merge'}
+                  </button>
+                )}
+                {(issue.status === 'ai_fixed' || issue.status === 'in_progress') && (
+                  <button className="btn btn-sm btn-danger" onClick={() => onReject(issue.id)}>Reject</button>
+                )}
+                {issue.fix_prompt && (
+                  <button className="btn btn-sm btn-ghost" onClick={() => onCopyPrompt(issue)} title="Copy prompt">{Icons.copy}</button>
+                )}
+                {issue.status === 'open' && (
+                  <button className="btn btn-sm btn-ghost" style={{color:'var(--warning)'}} onClick={() => onCopyFixCommand(issue)} title="Copy fix command">{Icons.terminal}</button>
+                )}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// ─── Issues Page ───────────────────────────────────────────
+function IssuesPage({ sourceFilter, addToast }) {
   const [issues, setIssues] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [sort, setSort] = useState('impact_score');
@@ -436,7 +1369,6 @@ function IssuesTab({ sourceFilter, addToast }) {
   const [severityFilter, setSeverityFilter] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null);
   const [rejectId, setRejectId] = useState(null);
 
   const fetchIssues = useCallback(async () => {
@@ -459,13 +1391,9 @@ function IssuesTab({ sourceFilter, addToast }) {
     if (sort === col) setOrder(o => o === 'desc' ? 'asc' : 'desc');
     else { setSort(col); setOrder('desc'); }
   };
-  const sortArrow = (col) => sort === col ? (order === 'desc' ? ' \u25BC' : ' \u25B2') : '';
 
-  const viewDetail = async (id) => {
-    try {
-      const data = await api(`/issues/${id}`);
-      setSelected(data.issue);
-    } catch (e) { addToast(e.message, 'error'); }
+  const viewDetail = (id) => {
+    navigate(`#/issue/${id}`);
   };
 
   const changeStatus = async (id, status, extra = {}) => {
@@ -473,7 +1401,6 @@ function IssuesTab({ sourceFilter, addToast }) {
       await api(`/issues/${id}/status`, { method: 'POST', body: { status, ...extra } });
       addToast(`${id} \u2192 ${status}`, 'success');
       fetchIssues();
-      if (selected && selected.id === id) viewDetail(id);
     } catch (e) { addToast(e.message, 'error'); }
   };
 
@@ -484,79 +1411,41 @@ function IssuesTab({ sourceFilter, addToast }) {
 
   return (
     <div>
-      {selected && <IssueDetail issue={selected} onClose={() => setSelected(null)} onStatusChange={changeStatus} addToast={addToast} />}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Issues</h1>
+          <p className="page-subtitle">Track and manage security and accessibility findings</p>
+        </div>
+      </div>
+
       {rejectId && <RejectModal issueId={rejectId} onClose={() => setRejectId(null)} onReject={handleReject} />}
 
-      <div style={{display:'flex', gap:8, marginBottom:12, flexWrap:'wrap'}}>
-        <select className="btn" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
+      <div className="filter-bar">
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
           <option value="">All statuses</option>
           {['open','in_progress','ai_fixed','verified','merged','closed','rejected'].map(s =>
             <option key={s} value={s}>{s.replace(/_/g,' ')}</option>
           )}
         </select>
-        <select className="btn" value={severityFilter} onChange={e => { setSeverityFilter(e.target.value); setPage(1); }}>
+        <select value={severityFilter} onChange={e => { setSeverityFilter(e.target.value); setPage(1); }}>
           <option value="">All severities</option>
           {['critical','high','medium','low','info'].map(s =>
             <option key={s} value={s}>{s}</option>
           )}
         </select>
-        <span style={{marginLeft:'auto', color:'var(--text-muted)', fontSize:12, alignSelf:'center'}}>{pagination.total} issues</span>
+        <span className="filter-count">{pagination.total} issues</span>
       </div>
 
       <div className="table-wrap">
-        {loading ? (
-          <div className="loading"><div className="spinner" /></div>
-        ) : issues.length === 0 ? (
-          <div className="empty"><h3>No issues found</h3><p>Run a fetch command to populate issues.</p></div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th onClick={() => toggleSort('source')}>Source{sortArrow('source')}</th>
-                <th>ID</th>
-                <th onClick={() => toggleSort('severity')}>Severity{sortArrow('severity')}</th>
-                <th onClick={() => toggleSort('impact_score')}>Impact{sortArrow('impact_score')}</th>
-                <th onClick={() => toggleSort('estimated_minutes')}>Effort{sortArrow('estimated_minutes')}</th>
-                <th>Description</th>
-                <th onClick={() => toggleSort('status')}>Status{sortArrow('status')}</th>
-                <th>Review</th>
-                <th>Cluster</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {issues.map(issue => (
-                <tr key={issue.id}>
-                  <td><Badge type="source" value={issue.source} /></td>
-                  <td style={{cursor:'pointer', color:'var(--accent)'}} onClick={() => viewDetail(issue.id)}>{issue.id}</td>
-                  <td><Badge type="severity" value={issue.severity} /></td>
-                  <td>{issue.impact_score != null ? Number(issue.impact_score).toFixed(1) : '—'}</td>
-                  <td><Badge type="effort" value={issue.estimated_effort} /></td>
-                  <td className="desc" title={issue.description}>{(issue.description || '').slice(0, 80)}{(issue.description || '').length > 80 ? '...' : ''}</td>
-                  <td><Badge type="status" value={issue.status} /></td>
-                  <td style={{fontSize:11, color:'var(--text-muted)'}}>{issue.review_level || '—'}</td>
-                  <td>{issue.cluster_id ? <span><span className="cluster-icon">\u25A0</span>{issue.cluster_id.slice(0,8)}</span> : ''}</td>
-                  <td>
-                    <div className="actions">
-                      <button className="btn btn-sm" onClick={() => viewDetail(issue.id)}>View</button>
-                      {(issue.status === 'ai_fixed' || issue.status === 'verified') && (
-                        <button className="btn btn-sm btn-success" onClick={() => changeStatus(issue.id, issue.status === 'ai_fixed' ? 'verified' : 'merged')}>
-                          {issue.status === 'ai_fixed' ? 'Approve' : 'Merge'}
-                        </button>
-                      )}
-                      {(issue.status === 'ai_fixed' || issue.status === 'in_progress') && (
-                        <button className="btn btn-sm btn-danger" onClick={() => setRejectId(issue.id)}>Reject</button>
-                      )}
-                      {issue.fix_prompt && (
-                        <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(issue.fix_prompt); addToast('Copied', 'success'); }}>Prompt</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <IssuesTable
+          issues={issues}
+          loading={loading}
+          onViewDetail={viewDetail}
+          onChangeStatus={changeStatus}
+          onReject={setRejectId}
+          onCopyPrompt={(issue) => { navigator.clipboard.writeText(issue.fix_prompt); addToast('Copied', 'success'); }}
+          onCopyFixCommand={(issue) => { navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)); addToast('Fix command copied', 'success'); }}
+        />
       </div>
 
       {pagination.pages > 1 && (
@@ -572,8 +1461,253 @@ function IssuesTab({ sourceFilter, addToast }) {
   );
 }
 
-// ─── Metrics Tab ────────────────────────────────────────────
-function MetricsTab({ addToast }) {
+// ─── Clusters Page ─────────────────────────────────────────
+function ClustersPage({ addToast }) {
+  const [clusters, setClusters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sourceFilter, setSourceFilter] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    api('/clusters')
+      .then(d => setClusters(d.clusters || []))
+      .catch(e => addToast(e.message, 'error'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const sources = [...new Set(clusters.map(c => c.source).filter(Boolean))].sort();
+  const filtered = sourceFilter ? clusters.filter(c => c.source === sourceFilter) : clusters;
+
+  if (loading) return <div className="loading"><div className="spinner" /></div>;
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Clusters</h1>
+          <p className="page-subtitle">{filtered.length} cluster{filtered.length !== 1 ? 's' : ''} grouping related issues</p>
+        </div>
+      </div>
+
+      <div className="filter-bar">
+        <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>
+          <option value="">All Sources</option>
+          {sources.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span className="filter-count">{filtered.length} of {clusters.length} clusters</span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="empty">
+          <h3>{sourceFilter ? `No clusters for "${sourceFilter}"` : 'No clusters yet'}</h3>
+          <p>Clusters are created automatically when related issues are detected during fetch.</p>
+        </div>
+      ) : (
+        <div className="cluster-grid">
+          {filtered.map(c => (
+            <div key={c.id} className="cluster-card" onClick={() => navigate(`#/clusters/${c.id}`)}>
+              <div className="cluster-card-header">
+                <div className="cluster-card-key">{c.cluster_key || c.id.slice(0,12)}</div>
+                <div className="cluster-card-count">{c.issue_count}</div>
+              </div>
+              <div className="cluster-card-meta">
+                <div className="cluster-card-meta-row">
+                  {Icons.folder}
+                  <Badge type="source" value={c.source} />
+                  <Badge type="status" value={c.status} />
+                </div>
+                {c.root_cause && (
+                  <div className="cluster-card-meta-row">
+                    {Icons.alertTriangle}
+                    <span>{c.root_cause}</span>
+                  </div>
+                )}
+                {c.fix_branch && (
+                  <div className="cluster-card-meta-row">
+                    {Icons.gitBranch}
+                    <span style={{fontFamily:'var(--font-mono)', fontSize:11}}>{c.fix_branch}</span>
+                  </div>
+                )}
+                {c.created_at && (
+                  <div className="cluster-card-meta-row">
+                    {Icons.clock}
+                    <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Cluster Detail Page ───────────────────────────────────
+function ClusterDetailPage({ clusterId, addToast }) {
+  const [cluster, setCluster] = useState(null);
+  const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [rejectId, setRejectId] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [batchPrompt, setBatchPrompt] = useState('');
+  const [promptLoading, setPromptLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      api('/clusters').then(d => {
+        const found = (d.clusters || []).find(c => c.id === clusterId);
+        setCluster(found || null);
+      }),
+      api(`/issues?cluster=${clusterId}&limit=200`).then(d => setIssues(d.issues || [])),
+    ])
+      .catch(e => addToast(e.message, 'error'))
+      .finally(() => setLoading(false));
+  }, [clusterId]);
+
+  useEffect(() => {
+    if (!clusterId) return;
+    setPromptLoading(true);
+    api(`/clusters/${clusterId}/prompt`)
+      .then(response => { setBatchPrompt(response.prompt || ''); })
+      .catch(() => { setBatchPrompt(''); })
+      .finally(() => setPromptLoading(false));
+  }, [clusterId]);
+
+  const viewDetail = (id) => {
+    navigate(`#/issue/${id}`);
+  };
+
+  const changeStatus = async (id, status, extra = {}) => {
+    try {
+      await api(`/issues/${id}/status`, { method: 'POST', body: { status, ...extra } });
+      addToast(`${id} \u2192 ${status}`, 'success');
+      const data = await api(`/issues?cluster=${clusterId}&limit=200`);
+      setIssues(data.issues || []);
+    } catch (e) { addToast(e.message, 'error'); }
+  };
+
+  const handleReject = async (tag, reason) => {
+    await changeStatus(rejectId, 'rejected', { rejection_tag: tag, rejected_reason: reason });
+    setRejectId(null);
+  };
+
+  if (loading) return <div className="loading"><div className="spinner" /></div>;
+
+  return (
+    <div>
+      <button className="btn btn-ghost" style={{marginBottom:16}} onClick={() => navigate('#/clusters')}>
+        {Icons.arrowLeft} Back to Clusters
+      </button>
+
+      {cluster ? (
+        <div className="cluster-detail-header">
+          <div className="cluster-detail-info">
+            <h2>{cluster.cluster_key || cluster.id}</h2>
+            <div className="cluster-detail-meta">
+              <div className="cluster-detail-meta-item">
+                {Icons.folder}
+                <Badge type="source" value={cluster.source} />
+              </div>
+              <div className="cluster-detail-meta-item">
+                {Icons.list}
+                <span>{cluster.issue_count} issues</span>
+              </div>
+              <div className="cluster-detail-meta-item">
+                <Badge type="status" value={cluster.status} />
+              </div>
+              {cluster.root_cause && (
+                <div className="cluster-detail-meta-item">
+                  {Icons.alertTriangle}
+                  <span>{cluster.root_cause}</span>
+                </div>
+              )}
+              {cluster.fix_branch && (
+                <div className="cluster-detail-meta-item">
+                  {Icons.gitBranch}
+                  <span style={{fontFamily:'var(--font-mono)'}}>{cluster.fix_branch}</span>
+                </div>
+              )}
+            </div>
+            {cluster.status === 'open' && (
+              <button className="btn" style={{color:'var(--warning)', marginTop:12}} onClick={() => {
+                navigator.clipboard.writeText(buildFixCommand(cluster.source, 'cluster', cluster.id)).then(() => {
+                  addToast('Fix-cluster command copied', 'success');
+                });
+              }}>
+                {Icons.terminal} Copy Fix Command
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Cluster {clusterId.slice(0,8)}</h1>
+            <p className="page-subtitle">Cluster details</p>
+          </div>
+        </div>
+      )}
+
+      {rejectId && <RejectModal issueId={rejectId} onClose={() => setRejectId(null)} onReject={handleReject} />}
+
+      {(batchPrompt || promptLoading) && (
+        <div className="prompt-section" style={{marginBottom:20}}>
+          <div className="prompt-header">
+            <h3 style={{display:'flex', alignItems:'center', gap:8}}>
+              Cluster Prompt
+              <span style={{fontSize:12, color:'var(--text-muted)', fontWeight:400}}>
+                ({promptLoading ? 'Loading...' : `${issues.filter(i => i.fix_prompt).length} issue${issues.filter(i => i.fix_prompt).length > 1 ? 's' : ''}`})
+              </span>
+            </h3>
+            <div style={{display:'flex', gap:8}}>
+              <button className="btn btn-sm" onClick={() => setShowPrompt(p => !p)} disabled={promptLoading}>
+                {showPrompt ? 'Hide' : 'Show'} Prompt
+              </button>
+              <button className={`btn btn-copy-lg ${copied ? 'btn-success' : ''}`} onClick={() => { navigator.clipboard.writeText(batchPrompt).then(() => { setCopied(true); addToast('Cluster prompt copied to clipboard', 'success'); setTimeout(() => setCopied(false), 2000); }); }} disabled={promptLoading || !batchPrompt}>
+                {Icons.copy} {copied ? 'Copied!' : 'Copy All'}
+              </button>
+              <button className="btn btn-copy-lg" style={{color:'var(--warning)'}} onClick={() => {
+                navigator.clipboard.writeText(buildFixCommand(cluster ? cluster.source : '', 'cluster', clusterId)).then(() => {
+                  addToast('Fix-cluster command copied', 'success');
+                });
+              }}>
+                {Icons.terminal} Copy Fix Command
+              </button>
+            </div>
+          </div>
+          {showPrompt && (
+            promptLoading ? (
+              <div style={{textAlign:'center', padding:40, color:'var(--text-muted)'}}>
+                <div className="spinner"></div>
+                <div style={{marginTop:10}}>Generating batch prompt...</div>
+              </div>
+            ) : (
+              <div className="prompt-rendered" dangerouslySetInnerHTML={{__html: (() => { try { return marked.parse(batchPrompt, { breaks: true }); } catch (e) { return batchPrompt.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>'); } })()}} />
+            )
+          )}
+        </div>
+      )}
+
+      <div className="table-wrap">
+        <IssuesTable
+          issues={issues}
+          loading={false}
+          onViewDetail={viewDetail}
+          onChangeStatus={changeStatus}
+          onReject={setRejectId}
+          onCopyPrompt={(issue) => { navigator.clipboard.writeText(issue.fix_prompt); addToast('Copied', 'success'); }}
+          onCopyFixCommand={(issue) => { navigator.clipboard.writeText(buildFixCommand(issue.source, 'issue', issue.id)); addToast('Fix command copied', 'success'); }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Metrics Page ──────────────────────────────────────────
+function MetricsPage({ addToast }) {
   const [mttf, setMttf] = useState(null);
   const [acceptance, setAcceptance] = useState(null);
   const [velocity, setVelocity] = useState(null);
@@ -582,146 +1716,194 @@ function MetricsTab({ addToast }) {
 
   useEffect(() => {
     Promise.all([
-      api('/metrics/mttf').then(setMttf).catch(() => null),
-      api('/metrics/acceptance').then(setAcceptance).catch(() => null),
-      api('/metrics/velocity?period=week').then(setVelocity).catch(() => null),
-      api('/metrics/queue-health').then(setQueue).catch(() => null),
-      api('/metrics/rejections').then(setRejections).catch(() => null),
+      api('/metrics/mttf').then(d => {
+        if (d && d.results) setMttf(d);
+        else if (d && d.avgHours != null) setMttf({ results: [{ source: 'all', avg_minutes: (d.avgHours || 0) * 60 }] });
+        else setMttf({ results: [] });
+      }).catch(() => setMttf({ results: [] })),
+      api('/metrics/acceptance').then(d => {
+        if (d && d.results) setAcceptance(d);
+        else if (Array.isArray(d)) setAcceptance({ results: d.map(r => ({ ...r, rate: (r.rate || 0) / 100 })) });
+        else setAcceptance({ results: [] });
+      }).catch(() => setAcceptance({ results: [] })),
+      api('/metrics/velocity?period=week').then(d => {
+        if (d && d.results) setVelocity(d);
+        else if (d && d.data) setVelocity({ results: d.data.map(r => ({ period: r.period, fixed_count: r.fixed || r.fixed_count || 0, found_count: r.found || r.found_count || 0, trend: d.trend })) });
+        else setVelocity({ results: [] });
+      }).catch(() => setVelocity({ results: [] })),
+      api('/metrics/queue-health').then(d => {
+        if (d && d.open_count != null) setQueue(d);
+        else if (d) setQueue({ open_count: d.open || 0, estimated_hours: d.estimatedHours || 0, aging_count: d.aging || 0 });
+        else setQueue({ open_count: 0, estimated_hours: 0, aging_count: 0 });
+      }).catch(() => setQueue({ open_count: 0, estimated_hours: 0, aging_count: 0 })),
+      api('/metrics/rejections').then(d => {
+        if (d && d.results) setRejections(d);
+        else if (Array.isArray(d)) setRejections({ results: d });
+        else setRejections({ results: [] });
+      }).catch(() => setRejections({ results: [] })),
     ]);
   }, []);
 
   const maxVal = (arr, key) => Math.max(...arr.map(r => r[key] || 0), 1);
 
   return (
-    <div className="metrics-grid">
-      {/* Queue Health */}
-      <div className="metric-card">
-        <h3>Queue Health</h3>
-        {queue ? (
-          <div>
-            <div className="detail-row"><span className="detail-key">Open Issues</span><span className="detail-value" style={{fontWeight:700,fontSize:20}}>{queue.open_count}</span></div>
-            <div className="detail-row"><span className="detail-key">Est. Time to Clear</span><span className="detail-value">{queue.estimated_hours ? `${queue.estimated_hours.toFixed(1)}h` : '—'}</span></div>
-            <div className="detail-row"><span className="detail-key">Aging (&gt;7 days)</span><span className="detail-value" style={{color: queue.aging_count > 0 ? 'var(--medium)' : 'var(--success)'}}>{queue.aging_count}</span></div>
-          </div>
-        ) : <div className="loading"><div className="spinner" /></div>}
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Metrics</h1>
+          <p className="page-subtitle">Performance insights and trends</p>
+        </div>
       </div>
 
-      {/* MTTF by source */}
-      <div className="metric-card">
-        <h3>Mean Time to Fix (hours)</h3>
-        {mttf && mttf.results ? (
-          mttf.results.length > 0 ? mttf.results.map((r, i) => {
-            const hours = (r.avg_minutes || 0) / 60;
-            const max = maxVal(mttf.results, 'avg_minutes') / 60;
-            return (
-              <div key={i} className="metric-bar-row">
-                <span className="metric-bar-label">{r.source || r.severity || 'all'}</span>
-                <div className="metric-bar-track">
-                  <div className="metric-bar-fill" style={{width: `${(hours/max)*100}%`, background:'var(--accent)'}} />
-                </div>
-                <span className="metric-bar-value">{hours.toFixed(1)}h</span>
-              </div>
-            );
-          }) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
-        ) : <div className="loading"><div className="spinner" /></div>}
-      </div>
-
-      {/* Acceptance Rate */}
-      <div className="metric-card">
-        <h3>Acceptance Rate by Rule</h3>
-        {acceptance && acceptance.results ? (
-          acceptance.results.length > 0 ? acceptance.results.slice(0, 10).map((r, i) => (
-            <div key={i} className="metric-bar-row">
-              <span className="metric-bar-label" title={r.rule_id}>{(r.rule_id || 'unknown').slice(0, 20)}</span>
-              <div className="metric-bar-track">
-                <div className="metric-bar-fill" style={{width: `${r.rate * 100}%`, background: r.rate > 0.7 ? 'var(--success)' : r.rate > 0.4 ? 'var(--medium)' : 'var(--critical)'}} />
-              </div>
-              <span className="metric-bar-value">{(r.rate * 100).toFixed(0)}%</span>
+      <div className="metrics-grid">
+        <div className="metric-card">
+          <h3>Queue Health</h3>
+          {queue ? (
+            <div>
+              <div className="detail-row"><span className="detail-key">Open Issues</span><span className="detail-value" style={{fontWeight:700,fontSize:22, fontFamily:'var(--font-sans)'}}>{queue.open_count}</span></div>
+              <div className="detail-row"><span className="detail-key">Est. Time to Clear</span><span className="detail-value">{queue.estimated_hours ? `${queue.estimated_hours.toFixed(1)}h` : '\u2014'}</span></div>
+              <div className="detail-row"><span className="detail-key">Aging (&gt;7 days)</span><span className="detail-value" style={{color: (queue.aging_count > 0) ? 'var(--medium)' : 'var(--success)', fontWeight:600}}>{queue.aging_count}</span></div>
             </div>
-          )) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
-        ) : <div className="loading"><div className="spinner" /></div>}
-      </div>
+          ) : <div className="loading"><div className="spinner" /></div>}
+        </div>
 
-      {/* Velocity */}
-      <div className="metric-card">
-        <h3>Fix Velocity (per week)</h3>
-        {velocity && velocity.results ? (
-          velocity.results.length > 0 ? (
-            <table className="metric-table">
-              <tbody>
-                {velocity.results.slice(0, 12).map((r, i) => (
-                  <tr key={i}>
-                    <td style={{color:'var(--text-muted)'}}>{r.period}</td>
-                    <td style={{fontWeight:600}}>{r.fixed_count}</td>
-                    <td>
-                      {r.trend === 'up' ? <span style={{color:'var(--success)'}}>&#9650;</span> :
-                       r.trend === 'down' ? <span style={{color:'var(--critical)'}}>&#9660;</span> :
-                       <span style={{color:'var(--text-muted)'}}>&#9644;</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
-        ) : <div className="loading"><div className="spinner" /></div>}
-      </div>
+        <div className="metric-card">
+          <h3>Mean Time to Fix (hours)</h3>
+          {mttf && mttf.results ? (
+            mttf.results.length > 0 ? mttf.results.map((r, i) => {
+              const hours = (r.avg_minutes || 0) / 60;
+              const max = maxVal(mttf.results, 'avg_minutes') / 60;
+              return (
+                <div key={i} className="metric-bar-row">
+                  <span className="metric-bar-label">{r.source || r.severity || 'all'}</span>
+                  <div className="metric-bar-track">
+                    <div className="metric-bar-fill" style={{width: `${(hours/max)*100}%`, background:'var(--accent)'}} />
+                  </div>
+                  <span className="metric-bar-value">{hours.toFixed(1)}h</span>
+                </div>
+              );
+            }) : <div style={{color:'var(--text-muted)', padding:20}}>No data yet</div>
+          ) : <div className="loading"><div className="spinner" /></div>}
+        </div>
 
-      {/* Rejections */}
-      <div className="metric-card">
-        <h3>Top Rejection Patterns</h3>
-        {rejections && rejections.results ? (
-          rejections.results.length > 0 ? (
-            <table className="metric-table">
-              <tbody>
-                {rejections.results.slice(0, 10).map((r, i) => (
-                  <tr key={i}>
-                    <td><Badge type="source" value={r.source} /></td>
-                    <td>{r.pattern_tag}</td>
-                    <td style={{fontWeight:600}}>{r.occurrences}</td>
-                    <td style={{color:'var(--text-muted)'}}>{r.rule_id || ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : <div style={{color:'var(--text-muted)'}}>No rejections yet</div>
-        ) : <div className="loading"><div className="spinner" /></div>}
-      </div>
+        <div className="metric-card">
+          <h3>Acceptance Rate by Rule</h3>
+          {acceptance && acceptance.results ? (
+            acceptance.results.length > 0 ? acceptance.results.slice(0, 10).map((r, i) => (
+              <div key={i} className="metric-bar-row">
+                <span className="metric-bar-label" title={r.rule_id}>{(r.rule_id || 'unknown').slice(0, 20)}</span>
+                <div className="metric-bar-track">
+                  <div className="metric-bar-fill" style={{width: `${r.rate * 100}%`, background: r.rate > 0.7 ? 'var(--success)' : r.rate > 0.4 ? 'var(--medium)' : 'var(--critical)'}} />
+                </div>
+                <span className="metric-bar-value">{(r.rate * 100).toFixed(0)}%</span>
+              </div>
+            )) : <div style={{color:'var(--text-muted)', padding:20}}>No data yet</div>
+          ) : <div className="loading"><div className="spinner" /></div>}
+        </div>
 
-      {/* Found vs Fixed placeholder */}
-      <div className="metric-card">
-        <h3>Issues Found vs Fixed</h3>
-        {velocity && velocity.results ? (
-          velocity.results.length > 0 ? (
-            <table className="metric-table">
-              <tbody>
-                <tr><td style={{color:'var(--text-muted)'}}>Period</td><td>Found</td><td>Fixed</td></tr>
-                {velocity.results.slice(0, 8).map((r, i) => (
-                  <tr key={i}>
-                    <td style={{color:'var(--text-muted)'}}>{r.period}</td>
-                    <td>{r.found_count || 0}</td>
-                    <td style={{color:'var(--success)'}}>{r.fixed_count || 0}</td>
+        <div className="metric-card">
+          <h3>Fix Velocity (per week)</h3>
+          {velocity && velocity.results ? (
+            velocity.results.length > 0 ? (
+              <table className="metric-table">
+                <tbody>
+                  {velocity.results.slice(0, 12).map((r, i) => (
+                    <tr key={i}>
+                      <td style={{color:'var(--text-muted)', fontFamily:'var(--font-mono)', fontSize:12}}>{r.period}</td>
+                      <td style={{fontWeight:600}}>{r.fixed_count}</td>
+                      <td>
+                        {r.trend === 'up' ? <span style={{color:'var(--success)'}}>&#9650;</span> :
+                         r.trend === 'down' ? <span style={{color:'var(--critical)'}}>&#9660;</span> :
+                         <span style={{color:'var(--text-muted)'}}>&#9644;</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : <div style={{color:'var(--text-muted)', padding:20}}>No data yet</div>
+          ) : <div className="loading"><div className="spinner" /></div>}
+        </div>
+
+        <div className="metric-card">
+          <h3>Top Rejection Patterns</h3>
+          {rejections && rejections.results ? (
+            rejections.results.length > 0 ? (
+              <table className="metric-table">
+                <tbody>
+                  {rejections.results.slice(0, 10).map((r, i) => (
+                    <tr key={i}>
+                      <td><Badge type="source" value={r.source} /></td>
+                      <td>{r.pattern_tag}</td>
+                      <td style={{fontWeight:600, fontFamily:'var(--font-mono)'}}>{r.occurrences}</td>
+                      <td style={{color:'var(--text-muted)', fontFamily:'var(--font-mono)', fontSize:11}}>{r.rule_id || ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : <div style={{color:'var(--text-muted)', padding:20}}>No rejections yet</div>
+          ) : <div className="loading"><div className="spinner" /></div>}
+        </div>
+
+        <div className="metric-card">
+          <h3>Issues Found vs Fixed</h3>
+          {velocity && velocity.results ? (
+            velocity.results.length > 0 ? (
+              <table className="metric-table">
+                <tbody>
+                  <tr style={{fontWeight:600, fontSize:11, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+                    <td>Period</td><td>Found</td><td>Fixed</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : <div style={{color:'var(--text-muted)'}}>No data yet</div>
-        ) : <div className="loading"><div className="spinner" /></div>}
+                  {velocity.results.slice(0, 8).map((r, i) => (
+                    <tr key={i}>
+                      <td style={{color:'var(--text-muted)', fontFamily:'var(--font-mono)', fontSize:12}}>{r.period}</td>
+                      <td>{r.found_count || 0}</td>
+                      <td style={{color:'var(--success)', fontWeight:600}}>{r.fixed_count || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : <div style={{color:'var(--text-muted)', padding:20}}>No data yet</div>
+          ) : <div className="loading"><div className="spinner" /></div>}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Settings Tab ───────────────────────────────────────────
-function SettingsTab({ addToast }) {
+// ─── Settings Page ─────────────────────────────────────────
+function SettingsPage({ addToast }) {
   const [scanners, setScanners] = useState([]);
-  const [schedule, setSchedule] = useState([]);
   const [testResults, setTestResults] = useState({});
   const [testing, setTesting] = useState({});
+  // Scanner credential state
+  const [scannerFields, setScannerFields] = useState({});
+  const [scannerCreds, setScannerCreds] = useState({});
+  // Per-project scanner config state
+  const [projectFields, setProjectFields] = useState({});
+  const [projectConfig, setProjectConfig] = useState({});
+  const [credSaving, setCredSaving] = useState({});
+  // Apiiro install/login state
+  const [apiiroInstalling, setApiiroInstalling] = useState(false);
+  const [apiiroLoggingIn, setApiiroLoggingIn] = useState(false);
+  const [apiiroInstallLog, setApiiroInstallLog] = useState('');
+  const [apiiroLoginLog, setApiiroLoginLog] = useState('');
 
   useEffect(() => {
     api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
-    api('/schedule-status').then(d => setSchedule(Array.isArray(d) ? d : d.schedules || [])).catch(() => {});
   }, []);
+
+  // Load setup fields for each scanner
+  useEffect(() => {
+    if (scanners.length === 0) return;
+    scanners.forEach(s => {
+      api(`/scanners/${s.name}/setup-fields`).then(d => {
+        setScannerFields(prev => ({...prev, [s.name]: d.fields || []}));
+        setScannerCreds(prev => ({...prev, [s.name]: d.saved || {}}));
+        setProjectFields(prev => ({...prev, [s.name]: d.projectFields || []}));
+        setProjectConfig(prev => ({...prev, [s.name]: d.savedProjectConfig || {}}));
+      }).catch(() => {});
+    });
+  }, [scanners]);
 
   const testConnection = async (source) => {
     setTesting(t => ({...t, [source]: true}));
@@ -736,58 +1918,539 @@ function SettingsTab({ addToast }) {
     setTesting(t => ({...t, [source]: false}));
   };
 
+  // Save scanner credentials (auth only → credentials.json)
+  const saveCreds = async (source) => {
+    setCredSaving(prev => ({...prev, [source]: true}));
+    try {
+      await api(`/scanners/${source}/credentials`, {
+        method: 'POST',
+        body: scannerCreds[source] || {},
+      });
+      addToast(`${source} credentials saved`, 'success');
+    } catch (e) {
+      addToast(`Save failed: ${e.message}`, 'error');
+    }
+    setCredSaving(prev => ({...prev, [source]: false}));
+  };
+
+  // Save per-project scanner config (→ DB scanner_config table)
+  const saveProjectCfg = async (source) => {
+    setCredSaving(prev => ({...prev, [source + '_project']: true}));
+    try {
+      await api(`/scanners/${source}/project-config`, {
+        method: 'POST',
+        body: projectConfig[source] || {},
+      });
+      addToast(`${source} project config saved`, 'success');
+    } catch (e) {
+      addToast(`Save failed: ${e.message}`, 'error');
+    }
+    setCredSaving(prev => ({...prev, [source + '_project']: false}));
+  };
+
+  const updateCred = (source, key, value) => {
+    setScannerCreds(prev => ({
+      ...prev,
+      [source]: {...(prev[source] || {}), [key]: value}
+    }));
+  };
+
+  const updateProjectCfg = (source, key, value) => {
+    setProjectConfig(prev => ({
+      ...prev,
+      [source]: {...(prev[source] || {}), [key]: value}
+    }));
+  };
+
+  // Apiiro install
+  const installApiiro = async () => {
+    setApiiroInstalling(true);
+    setApiiroInstallLog('Starting install...');
+    try {
+      await api('/scanners/apiiro/install', { method: 'POST' });
+      // Poll for completion
+      const poll = setInterval(async () => {
+        try {
+          const status = await api('/scanners/apiiro/process/install');
+          if (status.status === 'success') {
+            clearInterval(poll);
+            setApiiroInstalling(false);
+            setApiiroInstallLog(status.stdout || 'Installed successfully');
+            addToast('Apiiro CLI installed', 'success');
+            testConnection('apiiro');
+          } else if (status.status === 'failed') {
+            clearInterval(poll);
+            setApiiroInstalling(false);
+            setApiiroInstallLog(status.stderr || 'Install failed');
+            addToast('Apiiro CLI install failed', 'error');
+          } else {
+            setApiiroInstallLog('Installing...');
+          }
+        } catch (_) {}
+      }, 2000);
+    } catch (e) {
+      setApiiroInstalling(false);
+      setApiiroInstallLog(e.message);
+      addToast(`Install failed: ${e.message}`, 'error');
+    }
+  };
+
+  // Apiiro login
+  const loginApiiro = async () => {
+    setApiiroLoggingIn(true);
+    setApiiroLoginLog('Opening browser for login...');
+    try {
+      const r = await api('/scanners/apiiro/login', { method: 'POST' });
+      setApiiroLoginLog(r.message || 'Waiting for browser auth...');
+      // Poll for completion
+      const poll = setInterval(async () => {
+        try {
+          const status = await api('/scanners/apiiro/process/login');
+          if (status.status === 'success') {
+            clearInterval(poll);
+            setApiiroLoggingIn(false);
+            setApiiroLoginLog('Login successful');
+            addToast('Apiiro login successful', 'success');
+            testConnection('apiiro');
+          } else if (status.status === 'failed') {
+            clearInterval(poll);
+            setApiiroLoggingIn(false);
+            setApiiroLoginLog(status.stderr || 'Login failed');
+            addToast('Apiiro login failed', 'error');
+          }
+        } catch (_) {}
+      }, 3000);
+    } catch (e) {
+      setApiiroLoggingIn(false);
+      setApiiroLoginLog(e.message);
+      addToast(`Login failed: ${e.message}`, 'error');
+    }
+  };
+
   return (
     <div>
-      <h3 style={{marginBottom:16}}>Scanner Configuration</h3>
-      <div className="settings-grid">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">Scanner credentials and connections</p>
+        </div>
+      </div>
+
+      {/* ── Scanner Setup ── */}
+      <div className="settings-section">
+        <div className="settings-section-title">{Icons.shield} Scanner Setup</div>
+        <div className="settings-section-sub">Configure credentials and test connections for each scanner</div>
+
         {scanners.map(s => {
           const result = testResults[s.name];
-          const statusColor = result
-            ? (result.error ? 'red' : (result.installed?.installed ? 'green' : 'red'))
-            : 'gray';
+          const fields = scannerFields[s.name] || [];
+          const creds = scannerCreds[s.name] || {};
+          const isInstalled = result?.installed?.installed;
+          const isAuthed = result?.auth?.authenticated;
+          const isApiiro = s.name === 'apiiro';
+
           return (
-            <div key={s.name} className="scanner-card">
-              <h3><span className={`status-dot ${statusColor}`} /> {s.displayName || s.name}</h3>
-              <div className="scanner-detail">Plugin: @autofix-hub/plugin-{s.name}</div>
-              <div className="scanner-detail">Installed: {s.installed ? 'Yes' : 'No'}</div>
-              {result && !result.error && (
+            <div key={s.name} className="scanner-setup-card">
+              <div className="scanner-setup-header">
+                <h3>
+                  <span className={`s-dot ${result ? (result.error ? 'red' : ((isApiiro ? isInstalled !== false : true) ? 'green' : 'red')) : 'gray'}`} />
+                  {s.displayName || s.name}
+                  <span style={{fontSize:11, color:'var(--text-muted)', fontFamily:'var(--font-mono)', fontWeight:400}}>@autofix-hub/plugin-{s.name}</span>
+                </h3>
+                <div className="scanner-status-badges">
+                  {isApiiro && result && !result.error && result.installed && (
+                    <span className={`status-badge ${isInstalled ? 'ok' : 'err'}`}>
+                      {isInstalled ? 'CLI OK' : 'CLI Missing'}
+                    </span>
+                  )}
+                  {result && !result.error && result.auth && (
+                    <span className={`status-badge ${isAuthed ? 'ok' : 'err'}`}>
+                      {isAuthed ? 'Authenticated' : 'Not Authenticated'}
+                    </span>
+                  )}
+                  {!result && <span className="status-badge pending">Not tested</span>}
+                  {result?.error && <span className="status-badge err">Error</span>}
+                </div>
+              </div>
+
+              {/* Apiiro-specific: install + login */}
+              {isApiiro && (
                 <div>
-                  {result.installed && <div className="scanner-detail">CLI: {result.installed.installed ? result.installed.message || 'OK' : 'Not found'}</div>}
-                  {result.auth && <div className="scanner-detail">Auth: {result.auth.authenticated ? 'OK' : result.auth.message || 'Not authenticated'}</div>}
+                  <div className="scanner-install-bar">
+                    <span className="install-status">
+                      {result?.installed?.installed
+                        ? `Apiiro CLI: ${result.installed.message || 'installed'}`
+                        : 'Apiiro CLI not installed'}
+                    </span>
+                    <button className="btn btn-sm" onClick={installApiiro} disabled={apiiroInstalling}>
+                      {apiiroInstalling ? 'Installing...' : 'Install CLI'}
+                    </button>
+                    <button className="btn btn-sm btn-primary" onClick={loginApiiro} disabled={apiiroLoggingIn}>
+                      {apiiroLoggingIn ? 'Logging in...' : 'Login'}
+                    </button>
+                  </div>
+                  {(apiiroInstallLog || apiiroLoginLog) && (
+                    <div className="log-output">{apiiroInstallLog || apiiroLoginLog}</div>
+                  )}
                 </div>
               )}
-              {result && result.error && <div className="scanner-detail" style={{color:'var(--critical)'}}>Error: {result.error}</div>}
-              <button className="btn btn-sm" style={{marginTop:8}} onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
-                {testing[s.name] ? 'Testing...' : 'Test Connection'}
-              </button>
+
+              {/* Credential form (auth — saved globally) */}
+              {fields.length > 0 && (
+                <div>
+                  <div style={{fontSize:12, color:'var(--text-muted)', marginBottom:6, fontWeight:600}}>Credentials (global)</div>
+                  <div className="scanner-cred-form">
+                    {fields.map(f => (
+                      <div key={f.name} className="env-field">
+                        <label>{f.name}</label>
+                        {f.message && <div className="env-desc">{f.message}</div>}
+                        <input
+                          type={/key|token|password|secret/i.test(f.name) ? 'password' : 'text'}
+                          value={creds[f.name] || ''}
+                          placeholder={f.default || ''}
+                          onChange={e => updateCred(s.name, f.name, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="settings-actions">
+                    <button className="btn btn-primary btn-sm" onClick={() => saveCreds(s.name)} disabled={credSaving[s.name]}>
+                      {credSaving[s.name] ? 'Saving...' : 'Save Credentials'}
+                    </button>
+                    <button className="btn btn-sm" onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
+                      {testing[s.name] ? 'Testing...' : 'Test Connection'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Project config form (per-project — saved to DB) */}
+              {(projectFields[s.name] || []).length > 0 && (
+                <div style={{marginTop:16}}>
+                  <div style={{fontSize:12, color:'var(--text-muted)', marginBottom:6, fontWeight:600}}>Project Config (per-project)</div>
+                  <div className="scanner-cred-form">
+                    {(projectFields[s.name] || []).map(f => (
+                      <div key={f.name} className="env-field">
+                        <label>{f.name}</label>
+                        {f.message && <div className="env-desc">{f.message}</div>}
+                        <input
+                          type="text"
+                          value={(projectConfig[s.name] || {})[f.name] || ''}
+                          placeholder={f.default || ''}
+                          onChange={e => updateProjectCfg(s.name, f.name, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="settings-actions">
+                    <button className="btn btn-primary btn-sm" onClick={() => saveProjectCfg(s.name)} disabled={credSaving[s.name + '_project']}>
+                      {credSaving[s.name + '_project'] ? 'Saving...' : 'Save Project Config'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {fields.length === 0 && !isApiiro && (
+                <div style={{display:'flex', gap:10, alignItems:'center'}}>
+                  <span style={{fontSize:13, color:'var(--text-muted)'}}>No credentials required</span>
+                  <button className="btn btn-sm" onClick={() => testConnection(s.name)} disabled={testing[s.name]}>
+                    {testing[s.name] ? 'Testing...' : 'Test Connection'}
+                  </button>
+                </div>
+              )}
+
+              {/* Connection test details */}
+              {result && !result.error && (
+                <div style={{marginTop:12, fontSize:12, color:'var(--text-muted)'}}>
+                  {isApiiro && result.installed && <div>CLI: {result.installed.message || (result.installed.installed ? 'OK' : 'Not found')}</div>}
+                  {result.auth && <div>Auth: {result.auth.message || (result.auth.authenticated ? 'OK' : 'Not authenticated')}</div>}
+                </div>
+              )}
+              {result?.error && <div style={{marginTop:12, fontSize:12, color:'var(--critical)'}}>Error: {result.error}</div>}
             </div>
           );
         })}
-        {scanners.length === 0 && <div style={{color:'var(--text-muted)'}}>No plugins installed</div>}
-      </div>
-
-      <h3 style={{marginTop:24, marginBottom:16}}>Schedule</h3>
-      <div className="settings-grid">
-        {schedule.length > 0 ? schedule.map((s, i) => (
-          <div key={i} className="scanner-card">
-            <h3>{s.source}</h3>
-            <div className="scanner-detail">Cron: {s.cronExpr || '—'}</div>
-            <div className="scanner-detail">Next Run: {s.nextRun || '—'}</div>
-          </div>
-        )) : <div style={{color:'var(--text-muted)'}}>No scheduled tasks</div>}
+        {scanners.length === 0 && <div style={{color:'var(--text-muted)', padding:20}}>No plugins installed</div>}
       </div>
     </div>
   );
 }
 
-// ─── App ────────────────────────────────────────────────────
+// ─── Overview Page ─────────────────────────────────────────
+function OverviewPage({ stats, clusters, scanHistory, addToast, onRefresh }) {
+  const severities = ['critical', 'high', 'medium', 'low', 'info'];
+  const sevColors = { critical: 'var(--critical)', high: 'var(--high)', medium: 'var(--medium)', low: 'var(--low)', info: 'var(--info)' };
+  const [fetching, setFetching] = useState({});
+  const [scanners, setScanners] = useState([]);
+
+  useEffect(() => {
+    api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
+  }, []);
+
+  const fetchSource = async (source) => {
+    setFetching(prev => ({...prev, [source]: true}));
+    try {
+      const result = await api(`/scanners/${source}/fetch`, {
+        method: 'POST',
+        body: {},
+      });
+      if (result.success) {
+        addToast(`${source}: fetch complete`, 'success');
+        if (onRefresh) onRefresh();
+      } else {
+        addToast(`${source}: ${result.error || 'fetch failed'}`, 'error');
+      }
+    } catch (e) {
+      addToast(`${source}: ${e.message}`, 'error');
+    }
+    setFetching(prev => ({...prev, [source]: false}));
+  };
+
+  const fetchAll = async () => {
+    for (const s of scanners) {
+      await fetchSource(s.name);
+    }
+  };
+
+  const sevCounts = useMemo(() => {
+    if (!stats || !stats.by_severity) return {};
+    return stats.by_severity;
+  }, [stats]);
+
+  const totalSev = useMemo(() => {
+    return Object.values(sevCounts).reduce((a, b) => a + b, 0) || 1;
+  }, [sevCounts]);
+
+  const topClusters = (clusters || []).slice(0, 5);
+  const anyFetching = Object.values(fetching).some(Boolean);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Overview</h1>
+          <p className="page-subtitle">Dashboard summary for your project</p>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary" onClick={fetchAll} disabled={anyFetching}>
+            {Icons.zap} {anyFetching ? 'Fetching...' : 'Fetch All'}
+          </button>
+          {scanners.map(s => (
+            <button key={s.name} className="btn btn-sm" onClick={() => fetchSource(s.name)} disabled={fetching[s.name]}>
+              {fetching[s.name] ? `${s.name}...` : s.displayName || s.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="stat-grid">
+        <div className="stat-card accent">
+          <div className="stat-label">Total Issues</div>
+          <div className="stat-value">{stats?.total || 0}</div>
+          <div className="stat-sub">{stats?.by_source ? Object.entries(stats.by_source).map(([s,c]) => `${s}: ${c.total || c.open || 0}`).join(' / ') : 'across all scanners'}</div>
+        </div>
+        <div className="stat-card critical">
+          <div className="stat-label">Open</div>
+          <div className="stat-value" style={{color:'var(--low)'}}>{stats?.open || 0}</div>
+          <div className="stat-sub">awaiting fix</div>
+        </div>
+        <div className="stat-card info">
+          <div className="stat-label">AI Fixed</div>
+          <div className="stat-value" style={{color:'var(--accent)'}}>{stats?.ai_fixed || 0}</div>
+          <div className="stat-sub">awaiting review</div>
+        </div>
+        <div className="stat-card success">
+          <div className="stat-label">Verified</div>
+          <div className="stat-value" style={{color:'var(--success)'}}>{stats?.verified || 0}</div>
+          <div className="stat-sub">ready to merge</div>
+        </div>
+        <div className="stat-card warning">
+          <div className="stat-label">Acceptance Rate</div>
+          <div className="stat-value">{stats?.total_ai_fixed > 0 ? Math.round((stats.verified + (stats.merged || 0)) / stats.total_ai_fixed * 100) : '\u2014'}%</div>
+          <div className="stat-sub">{stats?.total_ai_fixed || 0} total attempts</div>
+        </div>
+      </div>
+
+      <div className="overview-grid">
+        <div className="overview-section">
+          <h3>{Icons.activity} Issues by Severity</h3>
+          {severities.map(sev => {
+            const count = sevCounts[sev] || 0;
+            const maxCount = Math.max(...Object.values(sevCounts), 1);
+            const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+            return (
+              <div key={sev} style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px'}}>
+                <div style={{width:'60px', fontSize:'11px', color:'var(--text-muted)', textTransform:'capitalize', textAlign:'right'}}>{sev}</div>
+                <div style={{flex:1, height:'18px', background:'var(--bg-input)', borderRadius:'4px', overflow:'hidden'}}>
+                  <div style={{height:'100%', width:`${pct}%`, minWidth: count > 0 ? '4px' : '0', background:sevColors[sev], borderRadius:'4px', transition:'width 0.3s ease'}} />
+                </div>
+                <div style={{width:'40px', fontSize:'11px', fontWeight:'700', color:sevColors[sev], fontFamily:'var(--font-mono)'}}>{count}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="overview-section">
+          <h3>{Icons.layers} Top Clusters</h3>
+          {topClusters.length > 0 ? topClusters.map(c => (
+            <div key={c.id} className="cluster-mini-card" onClick={() => navigate(`#/clusters/${c.id}`)}>
+              <div>
+                <div style={{fontWeight:600, fontSize:13}}>{c.cluster_key || c.id.slice(0,12)}</div>
+                <div style={{fontSize:11, color:'var(--text-muted)', display:'flex', gap:8, marginTop:2}}>
+                  <Badge type="source" value={c.source} />
+                  <Badge type="status" value={c.status} />
+                </div>
+              </div>
+              <div style={{fontWeight:700, fontSize:18, color:'var(--accent)', fontFamily:'var(--font-mono)'}}>{c.issue_count}</div>
+            </div>
+          )) : <div style={{color:'var(--text-muted)', padding:16, fontSize:13}}>No clusters yet</div>}
+        </div>
+
+        <div className="overview-section">
+          <h3>{Icons.clock} Recent Scans</h3>
+          {(scanHistory || []).length > 0 ? (scanHistory || []).slice(0, 5).map((h, i) => (
+            <div key={i} className="scan-history-item">
+              <Badge type="source" value={h.source} />
+              <span style={{fontFamily:'var(--font-mono)', fontSize:11, color:'var(--text-muted)'}}>{new Date(h.ran_at).toLocaleString()}</span>
+              <span style={{marginLeft:'auto', display:'flex', gap:10}}>
+                <span>{h.issues_found} found</span>
+                <span style={{color:'var(--success)'}}>{h.new_issues} new</span>
+              </span>
+            </div>
+          )) : <div style={{color:'var(--text-muted)', padding:16, fontSize:13}}>No scans yet</div>}
+        </div>
+
+        <div className="overview-section">
+          <h3>{Icons.shield} Status Summary</h3>
+          {stats ? (
+            <div>
+              {['open','in_progress','ai_fixed','verified','merged','closed','rejected'].map(s => {
+                const count = stats[s] || 0;
+                const total = stats.total || 1;
+                const pct = (count / total) * 100;
+                return (
+                  <div key={s} className="metric-bar-row">
+                    <span className="metric-bar-label">{s.replace(/_/g,' ')}</span>
+                    <div className="metric-bar-track">
+                      <div className="metric-bar-fill" style={{
+                        width: `${pct}%`,
+                        background: s === 'open' ? 'var(--low)' : s === 'rejected' ? 'var(--critical)' : s === 'merged' || s === 'verified' ? 'var(--success)' : s === 'ai_fixed' ? 'var(--accent)' : 'var(--text-muted)'
+                      }} />
+                    </div>
+                    <span className="metric-bar-value">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <div className="loading"><div className="spinner" /></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Sidebar ───────────────────────────────────────────────
+function Sidebar({ currentRoute, stats, scanHistory, pluginTabs, theme, onToggleTheme, isOpen }) {
+  const getLastScan = (source) => {
+    const entry = (scanHistory || []).find(h => h.source === source);
+    if (!entry) return { status: 'none', text: 'never' };
+    const ago = Math.round((Date.now() - new Date(entry.ran_at).getTime()) / 60000);
+    if (ago < 60) return { status: 'ok', text: `${ago}m ago` };
+    if (ago < 1440) return { status: 'ok', text: `${Math.round(ago/60)}h ago` };
+    return { status: 'stale', text: `${Math.round(ago/1440)}d ago` };
+  };
+
+  const navItems = [
+    { id: '#/', icon: Icons.home, label: 'Overview' },
+    { id: '#/issues', icon: Icons.list, label: 'Issues', badge: stats?.open },
+    { id: '#/clusters', icon: Icons.layers, label: 'Clusters' },
+    { id: '#/metrics', icon: Icons.chart, label: 'Metrics' },
+    { id: '#/settings', icon: Icons.settings, label: 'Settings' },
+  ];
+
+  const isActive = (id) => {
+    if (id === '#/') return currentRoute === '#/' || currentRoute === '#' || currentRoute === '';
+    return currentRoute.startsWith(id);
+  };
+
+  return (
+    <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-logo">
+          <div className="logo-icon">
+            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <span>autofix</span>-hub
+        </div>
+        <div className="sidebar-version">v1.0.0</div>
+      </div>
+
+      <div className="sidebar-nav">
+        <div className="nav-section-label">Navigation</div>
+        {navItems.map(item => (
+          <button
+            key={item.id}
+            className={`nav-item ${isActive(item.id) ? 'active' : ''}`}
+            onClick={() => navigate(item.id)}
+          >
+            {item.icon}
+            {item.label}
+            {item.badge > 0 && <span className="nav-badge">{item.badge}</span>}
+          </button>
+        ))}
+
+        {pluginTabs.length > 0 && (
+          <>
+            <div className="nav-section-label" style={{marginTop:8}}>Sources</div>
+            {pluginTabs.map(name => (
+              <button
+                key={name}
+                className={`nav-item ${currentRoute === `#/issues/${name}` ? 'active' : ''}`}
+                onClick={() => navigate(`#/issues/${name}`)}
+              >
+                {Icons.folder}
+                {name.charAt(0).toUpperCase() + name.slice(1)}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+
+      <div className="sidebar-footer">
+        {pluginTabs.length > 0 && (
+          <div style={{marginBottom:8}}>
+            <div className="nav-section-label" style={{padding:'0 0 6px'}}>Last Scans</div>
+            {pluginTabs.map(name => {
+              const ls = getLastScan(name);
+              return (
+                <div key={name} className="scanner-status-row">
+                  <span className={`status-dot ${ls.status}`} />
+                  <span>{name}</span>
+                  <span style={{marginLeft:'auto'}}>{ls.text}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <button className="theme-toggle-btn" onClick={onToggleTheme}>
+          {theme === 'dark' ? Icons.sun : Icons.moon}
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+// ─── App ───────────────────────────────────────────────────
 function App() {
-  const [tab, setTab] = useState('all');
+  const route = useHashRoute();
   const [theme, setTheme] = useState(localStorage.getItem('afh-theme') || 'dark');
   const [stats, setStats] = useState(null);
   const [scanners, setScanners] = useState([]);
   const [scanHistory, setScanHistory] = useState([]);
+  const [clusters, setClusters] = useState([]);
   const [toasts, setToasts] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const toastId = useRef(0);
 
   const addToast = (message, type = 'info') => {
@@ -806,68 +2469,75 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  const refreshStats = useCallback(() => {
+  const refreshData = useCallback(() => {
     api('/stats').then(setStats).catch(() => {});
     api('/scanners').then(d => setScanners(d.scanners || [])).catch(() => {});
-    api('/scan-history?limit=5').then(d => setScanHistory(d.history || [])).catch(() => {});
+    api('/scan-history?limit=10').then(d => setScanHistory(d.history || [])).catch(() => {});
+    api('/clusters').then(d => setClusters(d.clusters || [])).catch(() => {});
   }, []);
 
-  useEffect(() => { refreshStats(); const iv = setInterval(refreshStats, 30000); return () => clearInterval(iv); }, [refreshStats]);
+  useEffect(() => {
+    refreshData();
+    const iv = setInterval(refreshData, 30000);
+    return () => clearInterval(iv);
+  }, [refreshData]);
+
+  // Close sidebar on nav (mobile)
+  useEffect(() => { setSidebarOpen(false); }, [route]);
 
   const pluginTabs = scanners.filter(s => s.installed).map(s => s.name);
 
-  const sourceFilter = (tab === 'all' || tab === 'metrics' || tab === 'settings') ? '' : tab;
+  // Route matching
+  let page;
+  let sourceFilter = '';
 
-  const getLastScan = (source) => {
-    const entry = scanHistory.find(h => h.source === source);
-    if (!entry) return { status: 'none', text: 'never' };
-    const ago = Math.round((Date.now() - new Date(entry.ran_at).getTime()) / 60000);
-    if (ago < 60) return { status: 'ok', text: `${ago}m ago` };
-    if (ago < 1440) return { status: 'ok', text: `${Math.round(ago/60)}h ago` };
-    return { status: 'stale', text: `${Math.round(ago/1440)}d ago` };
-  };
+  if (route.startsWith('#/issue/')) {
+    const issueId = decodeURIComponent(route.replace('#/issue/', ''));
+    page = <IssueDetailPage issueId={issueId} addToast={addToast} />;
+  } else if (route.startsWith('#/clusters/')) {
+    const clusterId = route.replace('#/clusters/', '');
+    page = <ClusterDetailPage clusterId={clusterId} addToast={addToast} />;
+  } else if (route === '#/clusters') {
+    page = <ClustersPage addToast={addToast} />;
+  } else if (route === '#/metrics') {
+    page = <MetricsPage addToast={addToast} />;
+  } else if (route === '#/settings') {
+    page = <SettingsPage addToast={addToast} />;
+  } else if (route.startsWith('#/issues/')) {
+    sourceFilter = route.replace('#/issues/', '');
+    page = <IssuesPage sourceFilter={sourceFilter} addToast={addToast} />;
+  } else if (route === '#/issues') {
+    page = <IssuesPage sourceFilter="" addToast={addToast} />;
+  } else {
+    page = <OverviewPage stats={stats} clusters={clusters} scanHistory={scanHistory} addToast={addToast} onRefresh={refreshData} />;
+  }
 
   return (
-    <div className="app">
+    <div className="app-layout">
       <ToastContainer toasts={toasts} />
 
-      <div className="header">
-        <div className="header-left">
-          <h1><span>autofix</span>-hub</h1>
-          <div className="last-scans">
-            {pluginTabs.map(name => {
-              const ls = getLastScan(name);
-              return <span key={name} className="last-scan"><span className={`dot ${ls.status}`} />{name}: {ls.text}</span>;
-            })}
-          </div>
-        </div>
-        <div className="header-actions">
-          <button className="btn btn-primary" onClick={() => addToast('Use CLI: autofix-hub <source> fetch', 'info')}>Fetch All</button>
-          <button className="btn" onClick={() => addToast('Use CLI: autofix-hub <source> fix-next', 'info')}>Fix Next</button>
-          <button className="theme-toggle" onClick={toggleTheme}>{theme === 'dark' ? '\u2600' : '\u263E'}</button>
-        </div>
+      {/* Mobile header */}
+      <div className="mobile-header">
+        <button className="mobile-menu-btn" onClick={() => setSidebarOpen(o => !o)}>{Icons.menu}</button>
+        <span style={{fontWeight:700, fontSize:16}}><span style={{color:'var(--accent)'}}>autofix</span>-hub</span>
       </div>
 
-      <div className="tabs">
-        <button className={`tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All</button>
-        {pluginTabs.map(name => (
-          <button key={name} className={`tab ${tab === name ? 'active' : ''}`} onClick={() => setTab(name)}>
-            {name.charAt(0).toUpperCase() + name.slice(1)}
-          </button>
-        ))}
-        <button className={`tab ${tab === 'metrics' ? 'active' : ''}`} onClick={() => setTab('metrics')}>Metrics</button>
-        <button className={`tab ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')}>Settings</button>
-      </div>
+      {/* Sidebar overlay (mobile) */}
+      <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
-      {tab !== 'metrics' && tab !== 'settings' && <SummaryCards stats={stats} />}
+      <Sidebar
+        currentRoute={route}
+        stats={stats}
+        scanHistory={scanHistory}
+        pluginTabs={pluginTabs}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        isOpen={sidebarOpen}
+      />
 
-      {tab === 'metrics' ? (
-        <MetricsTab addToast={addToast} />
-      ) : tab === 'settings' ? (
-        <SettingsTab addToast={addToast} />
-      ) : (
-        <IssuesTab sourceFilter={sourceFilter} addToast={addToast} />
-      )}
+      <main className="main-content">
+        {page}
+      </main>
     </div>
   );
 }

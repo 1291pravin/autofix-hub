@@ -82,11 +82,17 @@ async function rejectCommand(source, id, tag, reason) {
     WHERE id = ?
   `).run(`[${tag}] ${reason}`, now, id);
 
+  // Resolve cluster membership once
+  const clusterRow = issue.cluster_id
+    ? { cluster_id: issue.cluster_id }
+    : db.prepare('SELECT cluster_id FROM issue_clusters WHERE issue_id = ? LIMIT 1').get(id);
+  const effectiveClusterId = clusterRow ? clusterRow.cluster_id : null;
+
   // Delete fix branch
   try {
     if (issue.fix_branch) {
-      if (issue.cluster_id) {
-        git.rollbackCluster(issue.cluster_id);
+      if (effectiveClusterId) {
+        git.rollbackCluster(effectiveClusterId);
       } else {
         git.rollbackFix(id);
       }
@@ -97,8 +103,8 @@ async function rejectCommand(source, id, tag, reason) {
 
   // Release file locks
   releaseLocksForIssue(id);
-  if (issue.cluster_id) {
-    releaseLocksForIssue(`cluster-${issue.cluster_id}`);
+  if (effectiveClusterId) {
+    releaseLocksForIssue(`cluster-${effectiveClusterId}`);
   }
 
   console.log(chalk.green(`${id} rejected [${tag}]: ${reason}`));

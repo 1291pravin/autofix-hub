@@ -170,11 +170,14 @@ module.exports = {
       message: 'SonarQube authentication token:',
       validate: (v) => v.trim() ? true : 'Token is required',
     },
+  ],
+
+  projectConfigPrompts: () => [
     {
       type: 'input',
       name: 'project_key',
-      message: 'SonarQube project key (or set SONARQUBE_PROJECT_KEY in .env):',
-      default: '',
+      message: 'SonarQube project key for this project:',
+      validate: (v) => v.trim() ? true : 'Project key is required',
     },
   ],
 
@@ -183,9 +186,9 @@ module.exports = {
       throw new Error('SonarQube credentials not configured. Run autofix-hub setup.');
     }
 
-    const projectKey = config.project_key || process.env.SONARQUBE_PROJECT_KEY;
+    const projectKey = config.project_key;
     if (!projectKey) {
-      throw new Error('SONARQUBE_PROJECT_KEY not configured. Set it in .env or run setup.');
+      throw new Error('SonarQube project key not configured. Configure it in Settings.');
     }
 
     return await fetchAllIssues(config.server_url, config.token, projectKey);
@@ -232,11 +235,12 @@ module.exports = {
   clusterKeys: (issue) => {
     const ruleId = issue.rule_id;
     const dir = issue.file_path ? path.dirname(issue.file_path) : 'unknown';
-    const category = issue.category;
 
     return [
-      `${ruleId}:dir:${dir}`,
-      `${ruleId}:cat:${category}`,
+      // exact: same rule in same directory — one code pattern, one fix
+      { key: `${ruleId}:dir:${dir}`, tier: 'exact' },
+      // tight: same rule anywhere — same remediation
+      { key: `${ruleId}`, tier: 'tight' },
     ];
   },
 
@@ -354,24 +358,100 @@ module.exports = {
   promptTemplate: (issue) => {
     const category = issue.category;
     const filePath = issue.file_path || 'unknown file';
-    const line = issue.line_number ? ` (line ${issue.line_number})` : '';
     const desc = issue.description;
     const ruleId = issue.rule_id;
 
-    // Extract extra context from scanner_data
+    // Extract rich context from scanner_data
     let sonarMessage = '';
     let tags = '';
+    let textRange = null;
+    let flows = [];
+    let effort = '';
+    let cleanCodeAttr = '';
+    let cleanCodeCategory = '';
+    let impacts = [];
+    let quickFixAvailable = false;
+    let scope = '';
     try {
       const data = typeof issue.scanner_data === 'string' ? JSON.parse(issue.scanner_data) : issue.scanner_data;
       sonarMessage = data.message || '';
       tags = (data.tags || []).join(', ');
+      textRange = data.textRange || null;
+      flows = data.flows || [];
+      effort = data.effort || data.debt || '';
+      cleanCodeAttr = data.cleanCodeAttribute || '';
+      cleanCodeCategory = data.cleanCodeAttributeCategory || '';
+      impacts = data.impacts || [];
+      quickFixAvailable = data.quickFixAvailable || false;
+      scope = data.scope || '';
     } catch (_) {}
 
+    // Build location string with full range
+    let locationStr = `**File:** ${filePath}`;
+    if (textRange && textRange.startLine) {
+      if (textRange.endLine && textRange.endLine !== textRange.startLine) {
+        locationStr += ` (lines ${textRange.startLine}–${textRange.endLine})`;
+      } else {
+        locationStr += ` (line ${textRange.startLine})`;
+      }
+    } else if (issue.line_number) {
+      locationStr += ` (line ${issue.line_number})`;
+    }
+
+    // Build rule link for standard RSPEC rules (lang:S1234 format)
+    const ruleMatch = ruleId ? ruleId.match(/^([^:]+):S(\d+)$/) : null;
+    const ruleLink = ruleMatch ? `https://rules.sonarsource.com/${ruleMatch[1]}/RSPEC-${ruleMatch[2]}` : '';
+
+    // Build flows/secondary locations string
+    let flowsStr = '';
+    if (flows.length > 0) {
+      const flowLines = [];
+      for (const flow of flows) {
+        const locations = flow.locations || [];
+        for (const loc of locations) {
+          const locFile = extractFilePath(loc.component) || filePath;
+          const locRange = loc.textRange;
+          const locMsg = loc.msg || '';
+          if (locRange) {
+            const lineRef = locRange.startLine === locRange.endLine
+              ? `line ${locRange.startLine}`
+              : `lines ${locRange.startLine}–${locRange.endLine}`;
+            flowLines.push(`  - \`${locFile}\` ${lineRef}: ${locMsg}`);
+          } else if (locMsg) {
+            flowLines.push(`  - ${locMsg}`);
+          }
+        }
+      }
+      if (flowLines.length > 0) {
+        flowsStr = `**Related locations:**\n${flowLines.join('\n')}`;
+      }
+    }
+
+    // Build impacts string
+    let impactsStr = '';
+    if (impacts.length > 0) {
+      impactsStr = impacts.map(i => `${i.softwareQuality} (${i.severity})`).join(', ');
+    }
+
+    // Build clean code attribute string
+    let cleanCodeStr = '';
+    if (cleanCodeAttr) {
+      cleanCodeStr = cleanCodeCategory
+        ? `${cleanCodeAttr} (${cleanCodeCategory})`
+        : cleanCodeAttr;
+    }
+
     const context = [
-      `**File:** ${filePath}${line}`,
-      `**Rule:** ${ruleId}`,
+      locationStr,
+      `**Rule:** ${ruleId}` + (ruleLink ? ` — [rule docs](${ruleLink})` : ''),
+      `**Severity:** ${issue.severity}` + (impactsStr ? ` | **Impact:** ${impactsStr}` : ''),
       tags ? `**Tags:** ${tags}` : '',
+      cleanCodeStr ? `**Clean Code:** ${cleanCodeStr}` : '',
+      effort ? `**Estimated effort:** ${effort}` : '',
+      scope === 'TEST' ? `**Scope:** Test code` : '',
       sonarMessage && sonarMessage !== desc ? `**Detail:** ${sonarMessage}` : '',
+      flowsStr,
+      quickFixAvailable ? `**Note:** SonarQube indicates a quick fix is available for this pattern.` : '',
     ].filter(Boolean).join('\n');
 
     let template = '';
@@ -385,10 +465,11 @@ module.exports = {
           context,
           ``,
           `### Instructions:`,
-          `1. Analyze the reported bug and understand the root cause`,
-          `2. Fix the logic error with a minimal change`,
-          `3. Add null checks or boundary checks if the bug is caused by missing guards`,
-          `4. Ensure the fix handles edge cases`,
+          `1. Read the affected file and the related locations listed above to understand the full context`,
+          `2. Analyze the reported bug and identify the root cause`,
+          `3. Fix the logic error with a minimal, targeted change`,
+          `4. Add null checks or boundary checks if the bug is caused by missing guards`,
+          `5. Ensure the fix handles edge cases without altering unrelated behavior`,
           ``,
           `**Important:** Minimal change, follow existing code style. Fix only this issue.`,
         ].join('\n');
@@ -402,10 +483,12 @@ module.exports = {
           context,
           ``,
           `### Instructions:`,
-          `1. Identify the vulnerability type (OWASP category)`,
-          `2. Apply the standard remediation for this vulnerability class`,
-          `3. Use parameterized queries for injection, output encoding for XSS, etc.`,
-          `4. Do not introduce new security controls — fix the existing vulnerability`,
+          `1. Read the affected file and any related locations listed above`,
+          `2. Identify the vulnerability type (OWASP category) and attack vector`,
+          `3. Apply the standard remediation for this vulnerability class`,
+          `4. Use parameterized queries for injection, output encoding for XSS, etc.`,
+          `5. Do not introduce new security controls — fix the existing vulnerability`,
+          `6. Verify the fix does not break existing functionality`,
           ``,
           `**Important:** Minimal change, follow existing code style. Fix only this issue.`,
         ].join('\n');
@@ -419,10 +502,11 @@ module.exports = {
           context,
           ``,
           `### Instructions:`,
-          `1. Review the flagged code for security implications`,
-          `2. If the current pattern is insecure: replace with the secure alternative`,
-          `3. If the current pattern is intentional and safe: add a comment explaining why`,
-          `4. Follow security best practices for the framework in use`,
+          `1. Read the affected file and any related locations listed above`,
+          `2. Review the flagged code for security implications`,
+          `3. If the current pattern is insecure: replace with the secure alternative`,
+          `4. If the current pattern is intentional and safe: add a comment explaining why`,
+          `5. Follow security best practices for the framework in use`,
           ``,
           `**Important:** Minimal change, follow existing code style. Fix only this issue.`,
         ].join('\n');
@@ -436,10 +520,11 @@ module.exports = {
           context,
           ``,
           `### Instructions:`,
-          `1. Refactor the code as suggested by the SonarQube rule`,
-          `2. Apply the minimal refactoring that resolves the issue`,
-          `3. Maintain existing behavior — this is a quality fix, not a feature change`,
-          `4. Follow the project's existing patterns and conventions`,
+          `1. Read the affected file at the specified location`,
+          `2. Understand the SonarQube rule requirement and why this code triggers it`,
+          `3. Apply the minimal refactoring that resolves the issue`,
+          `4. Maintain existing behavior — this is a quality fix, not a feature change`,
+          `5. Follow the project's existing patterns and conventions`,
           ``,
           `**Important:** Minimal change, follow existing code style. Fix only this issue.`,
         ].join('\n');
@@ -453,9 +538,10 @@ module.exports = {
           context,
           ``,
           `### Instructions:`,
-          `1. Analyze the reported issue`,
-          `2. Apply the minimal fix that resolves it`,
-          `3. Follow existing code style and patterns`,
+          `1. Read the affected file and any related locations listed above`,
+          `2. Analyze the reported issue and understand the root cause`,
+          `3. Apply the minimal fix that resolves it`,
+          `4. Follow existing code style and patterns`,
           ``,
           `**Important:** Minimal change, follow existing code style. Fix only this issue.`,
         ].join('\n');
@@ -469,10 +555,56 @@ module.exports = {
 
     const ruleId = issues[0].rule_id;
     const category = issues[0].category;
+    const desc = issues[0].description;
 
-    const locations = issues.map((i) => {
+    // Build rule link for standard RSPEC rules (lang:S1234 format)
+    const ruleMatch = ruleId ? ruleId.match(/^([^:]+):S(\d+)$/) : null;
+    const ruleLink = ruleMatch ? `https://rules.sonarsource.com/${ruleMatch[1]}/RSPEC-${ruleMatch[2]}` : '';
+
+    // Extract tags from first issue for context
+    let tags = '';
+    try {
+      const data = typeof issues[0].scanner_data === 'string' ? JSON.parse(issues[0].scanner_data) : issues[0].scanner_data;
+      tags = (data.tags || []).join(', ');
+    } catch (_) {}
+
+    // Build detailed per-issue locations with individual descriptions
+    const locationDetails = issues.map((i) => {
       const loc = i.file_path || 'unknown';
-      return i.line_number ? `- ${loc}:${i.line_number}` : `- ${loc}`;
+      let entry = '';
+
+      // Extract textRange and flows for richer context
+      let rangeStr = '';
+      let flowNotes = [];
+      try {
+        const data = typeof i.scanner_data === 'string' ? JSON.parse(i.scanner_data) : i.scanner_data;
+        const tr = data.textRange;
+        if (tr && tr.startLine) {
+          rangeStr = tr.endLine && tr.endLine !== tr.startLine
+            ? `lines ${tr.startLine}–${tr.endLine}`
+            : `line ${tr.startLine}`;
+        }
+        for (const flow of (data.flows || [])) {
+          for (const floc of (flow.locations || [])) {
+            if (floc.msg) {
+              const fFile = extractFilePath(floc.component) || loc;
+              const fRange = floc.textRange;
+              const fLine = fRange ? `line ${fRange.startLine}` : '';
+              flowNotes.push(`${fFile}${fLine ? ':' + fLine : ''} — ${floc.msg}`);
+            }
+          }
+        }
+      } catch (_) {}
+
+      const lineRef = rangeStr || (i.line_number ? `line ${i.line_number}` : '');
+      entry = `- \`${loc}\`${lineRef ? ' ' + lineRef : ''}`;
+      if (i.description !== issues[0].description) {
+        entry += `: ${i.description}`;
+      }
+      if (flowNotes.length > 0) {
+        entry += '\n' + flowNotes.map(n => `    - Related: ${n}`).join('\n');
+      }
+      return entry;
     }).join('\n');
 
     return [
@@ -480,15 +612,19 @@ module.exports = {
       ``,
       `**Category:** ${category}`,
       `**Description:** ${issues[0].description}`,
+      ruleLink ? `**Rule docs:** [${ruleId}](${ruleLink})` : '',
+      tags ? `**Tags:** ${tags}` : '',
       ``,
       `### Affected locations:`,
-      locations,
+      locationDetails,
       ``,
       `### Instructions:`,
-      `Fix all ${issues.length} instances of this issue across the listed files.`,
-      `Apply the same fix pattern consistently to each location.`,
+      `1. Read each affected file at the specified locations`,
+      `2. Understand the rule requirement: why this pattern is flagged`,
+      `3. Fix all ${issues.length} instances applying the same fix pattern consistently`,
+      `4. Verify each fix individually — locations may have slightly different contexts`,
       ``,
       `**Important:** Minimal change, follow existing code style. Fix only these issues.`,
-    ].join('\n');
+    ].filter(Boolean).join('\n');
   },
 };
