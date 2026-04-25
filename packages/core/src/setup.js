@@ -118,6 +118,41 @@ function initSchema() {
       value TEXT,
       PRIMARY KEY (source, key)
     );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      source TEXT,
+      started_at TEXT,
+      ended_at TEXT,
+      status TEXT DEFAULT 'active',
+      meta TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS clubs (
+      id TEXT PRIMARY KEY,
+      session_id TEXT,
+      source TEXT NOT NULL,
+      category TEXT,
+      rule_id TEXT,
+      common_dir TEXT,
+      issue_count INTEGER,
+      files_count INTEGER,
+      lines_est INTEGER,
+      status TEXT DEFAULT 'proposed',
+      branch TEXT,
+      worktree_path TEXT,
+      pr_url TEXT,
+      abandon_reason TEXT,
+      gate_result TEXT,
+      created_at TEXT,
+      updated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS club_issues (
+      club_id TEXT NOT NULL,
+      issue_id TEXT NOT NULL,
+      PRIMARY KEY (club_id, issue_id)
+    );
   `);
 
   // ALTER migrations for pre-existing DBs created before a column existed.
@@ -144,6 +179,9 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_issue_clusters_cluster_id ON issue_clusters (cluster_id);
     CREATE INDEX IF NOT EXISTS idx_issue_clusters_issue_id ON issue_clusters (issue_id);
     CREATE INDEX IF NOT EXISTS idx_clusters_source_tier ON clusters (source, tier);
+    CREATE INDEX IF NOT EXISTS idx_clubs_session ON clubs (session_id);
+    CREATE INDEX IF NOT EXISTS idx_clubs_status ON clubs (status);
+    CREATE INDEX IF NOT EXISTS idx_club_issues_issue ON club_issues (issue_id);
   `);
 }
 
