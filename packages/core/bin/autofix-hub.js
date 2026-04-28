@@ -36,6 +36,15 @@ program
   });
 
 program
+  .command('install-workflows')
+  .description('Copy bundled Windsurf workflow files into <cwd>/.windsurf/workflows/')
+  .option('-f, --force', 'Overwrite existing workflow files', false)
+  .action(async (opts) => {
+    const { installWorkflowsCommand } = require('../src/commands/installWorkflows');
+    await installWorkflowsCommand({ force: opts.force === true });
+  });
+
+program
   .command('status <id> <newStatus>')
   .description('Transition issue status')
   .action(async (id, newStatus) => {
@@ -237,6 +246,31 @@ for (const [name, plugin] of plugins) {
     .action(async (opts) => {
       const { runCommand } = require('../src/commands/run');
       await runCommand(name, { checkWip: opts.checkWip !== false });
+    });
+
+  sourceCmd
+    .command('check-prs')
+    .description('Reconcile DB status for this plugin from gh — merged/closed PRs update clubs+issues')
+    .action(async () => {
+      const { checkPrsCommand } = require('../src/commands/checkPrs');
+      await checkPrsCommand(name);
+    });
+
+  sourceCmd
+    .command('next-club')
+    .description('Autopilot iteration: wait for a free WIP slot, pick top cluster, create worktree, return everything Cascade needs')
+    .option('--wait', 'Block until a WIP slot opens (default: false — exit immediately if full)')
+    .option('--poll-seconds <n>', 'Polling interval while waiting', '60')
+    .option('--max-wait-minutes <n>', 'Maximum total wait when --wait is set', '30')
+    .option('--no-sync', 'Skip the implicit `check-prs` reconcile before checking capacity')
+    .action(async (opts) => {
+      const { nextClubCommand } = require('../src/commands/nextClub');
+      await nextClubCommand(name, {
+        wait: opts.wait === true,
+        pollSeconds: opts.pollSeconds,
+        maxWaitMinutes: opts.maxWaitMinutes,
+        sync: opts.sync !== false,
+      });
     });
 }
 

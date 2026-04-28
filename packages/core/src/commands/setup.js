@@ -219,6 +219,14 @@ async function setupCommand() {
     console.log(chalk.green('✓') + ' Created .gitignore');
   }
 
+  // Install Windsurf workflow files (best-effort)
+  try {
+    const { installWorkflowsCommand } = require('./installWorkflows');
+    await installWorkflowsCommand({ force: false });
+  } catch (err) {
+    console.log(chalk.gray(`Skipped workflow install: ${err.message}`));
+  }
+
   // Summary
   console.log(chalk.bold.green(`\nSetup complete! ${configuredCount} of ${pluginList.length} scanners configured.`));
   console.log(chalk.gray(`Run 'autofix-hub <source> fetch' to pull issues.\n`));
